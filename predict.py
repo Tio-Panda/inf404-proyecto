@@ -10,16 +10,15 @@ import gc
 import time
 import tarfile
 
-
 def predict_single(pt_dir_path, pt_file, model_path, res_dir_path, is_cuda=True):
 	data = torch.load(os.path.join(pt_dir_path, pt_file))
 
-	reverse = data.edge_index.index_select(0, torch.LongTensor([1, 0]))
-	data.edge_index = torch.cat([data.edge_index, reverse], dim=1)
-	data.edge_attr = torch.cat([data.edge_attr, data.edge_attr], dim=0)
-	data.x = data.x.float()
-	data.edge_index = data.edge_index.long()
-	data.edge_attr = data.edge_attr.float()
+	# reverse = data.edge_index.index_select(0, torch.LongTensor([1, 0]))
+	# data.edge_index = torch.cat([data.edge_index, reverse], dim=1)
+	# data.edge_attr = torch.cat([data.edge_attr, data.edge_attr], dim=0)
+	# data.x = data.x.float()
+	# data.edge_index = data.edge_index.long()
+	# data.edge_attr = data.edge_attr.float()
 
 	mymodel = GTModel(3,3)
 	name_encoder = None

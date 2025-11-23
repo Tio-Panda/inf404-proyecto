@@ -1,7 +1,9 @@
 # data folders
 full_data/
 processed_data/
+sym_data/
 data/
+models/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

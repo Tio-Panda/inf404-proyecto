@@ -1,3 +1,4 @@
+import os
 import torch
 import torch.nn as nn
 from torch.nn import NLLLoss, CrossEntropyLoss, BCELoss
@@ -21,61 +22,6 @@ import numpy as np
 from multiprocessing import Pool
 
 
-# hyperparameter setting
-hyper_params = {}
-if sys.argv[1] == "pretrain":
-	hyper_params["pretrain"] = True
-elif sys.argv[1] == "finetune":
-	hyper_params["pretrain"] = False
-else:
-	print("argv error! should be either pretrain or finetune!")
-	exit(1)
-
-if hyper_params["pretrain"]:
-	hyper_params["seed"] = 77
-	hyper_params["lr"] = 1e-4
-	hyper_params["epoch_num"] = 40
-	hyper_params["batch_size"] = 2
-	hyper_params["log_dir"] = "./log/pretrain"
-	hyper_params["checkpoint_path"] = None
-	hyper_params["dataset_path"] = "./data/pt/pretrain"
-
-else:
-	hyper_params["seed"] = 77
-	hyper_params["lr"] = 1e-4
-	hyper_params["epoch_num"] = 60
-	hyper_params["batch_size"] = 1
-	hyper_params["log_dir"] = "./log/finetune" 
-	hyper_params["checkpoint_path"] = "./models/pretrain/pretrain-best.ptg"
-	hyper_params["dataset_path"] = "./data/pt/finetune"
-
-# create log folder and model folder
-if not os.path.isdir(hyper_params["log_dir"]):
-	os.makedirs(hyper_params["log_dir"])
-
-if hyper_params["pretrain"] and not os.path.isdir("./models/pretrain"):
-	os.makedirs("./models/pretrain")
-
-if not hyper_params["pretrain"] and not os.path.isdir("./models/finetune"):
-	os.makedirs("./models/finetune")
-
-# set up training and validation sets
-torch.manual_seed(hyper_params["seed"])
-dataset_train = MyOwnDataset(root=hyper_params["dataset_path"])
-dataset_train = dataset_train.shuffle()
-dataset_vld = MyOwnDataset(root='./data/pt/validation')
-
-train_loader = DataLoader(dataset_train, batch_size=hyper_params["batch_size"], shuffle=True, pin_memory=True, num_workers=2)
-vld_loader = DataLoader(dataset_vld, batch_size=1, shuffle=False, pin_memory=True, num_workers=1)
-
-# load model and optimizer weights
-model = GTModel(3, 3).cuda()
-optimizer = torch.optim.AdamW(model.parameters(), lr=hyper_params["lr"])
-
-if hyper_params["checkpoint_path"] is not None and os.path.isfile(hyper_params["checkpoint_path"]):
-	checkpoint = torch.load(hyper_params["checkpoint_path"])
-	model.load_state_dict(checkpoint['model_state_dict'])
-	optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
 # train and evaluate
 def train(log_file):
@@ -254,69 +200,128 @@ def evaluate(log_file):
 	return loss, precision, recall, f1
 
 
-best_f1 = 0
-if hyper_params["checkpoint_path"] is not None and os.path.isfile(hyper_params["checkpoint_path"]):
-	# evaluate the model if it is loaded from a checkpoint
-	with open(hyper_params["log_dir"] + "/gnn-load.log", "w") as log_file:
+if __name__ == "__main__":
+    # hyperparameter setting
+    hyper_params = {}
+    if sys.argv[1] == "pretrain":
+        hyper_params["pretrain"] = True
+    elif sys.argv[1] == "finetune":
+        hyper_params["pretrain"] = False
+    else:
+        print("argv error! should be either pretrain or finetune!")
+        exit(1)
 
-		localtime = time.asctime(time.localtime(time.time()))
-		log_file.write(str(localtime) + "\n")
+    batch_size = 200
 
-		log_file.write("evaluate loaded model on vld set\n")
+    if hyper_params["pretrain"]:
+        hyper_params["seed"] = 77
+        hyper_params["lr"] = 1e-4
+        hyper_params["epoch_num"] = 40
+        hyper_params["batch_size"] = batch_size
+        hyper_params["log_dir"] = "./log/pretrain"
+        hyper_params["checkpoint_path"] = None
+        hyper_params["dataset_path"] = "./data/pt/pretrain"
 
-		print("evaluate loaded model on vld set first")
-		_, _, _, f1 = evaluate(log_file)
-	
-	best_f1 = f1
-	if hyper_params["pretrain"]:
-			torch.save({
-			'model_state_dict': model.state_dict(),
-			'optimizer_state_dict': optimizer.state_dict(),
-			}, "models/pretrain/pretrain-best.ptg")
-	else:
-		torch.save({
-		'model_state_dict': model.state_dict(),
-		'optimizer_state_dict': optimizer.state_dict(),
-		}, "models/finetune/finetune-best.ptg")
+    else:
+        hyper_params["seed"] = 77
+        hyper_params["lr"] = 1e-4
+        hyper_params["epoch_num"] = 60
+        hyper_params["batch_size"] = 1
+        hyper_params["log_dir"] = "./log/finetune" 
+        hyper_params["checkpoint_path"] = "./models/pretrain/pretrain-best.ptg"
+        hyper_params["dataset_path"] = "./data/pt/finetune"
+
+# create log folder and model folder
+    if not os.path.isdir(hyper_params["log_dir"]):
+        os.makedirs(hyper_params["log_dir"])
+
+    if hyper_params["pretrain"] and not os.path.isdir("./models/pretrain"):
+        os.makedirs("./models/pretrain")
+
+    if not hyper_params["pretrain"] and not os.path.isdir("./models/finetune"):
+        os.makedirs("./models/finetune")
+
+# set up training and validation sets
+    torch.manual_seed(hyper_params["seed"])
+    dataset_train = MyOwnDataset(root=hyper_params["dataset_path"])
+    dataset_train = dataset_train.shuffle()
+    dataset_vld = MyOwnDataset(root='./data/pt/validation')
+
+    train_loader = DataLoader(dataset_train, batch_size=hyper_params["batch_size"], shuffle=True, pin_memory=True, num_workers=9)
+    vld_loader = DataLoader(dataset_vld, batch_size=batch_size, shuffle=False, pin_memory=True, num_workers=5)
+
+# load model and optimizer weights
+    model = GTModel(3, 3).cuda()
+    optimizer = torch.optim.AdamW(model.parameters(), lr=hyper_params["lr"])
+
+    if hyper_params["checkpoint_path"] is not None and os.path.isfile(hyper_params["checkpoint_path"]):
+        checkpoint = torch.load(hyper_params["checkpoint_path"])
+        model.load_state_dict(checkpoint['model_state_dict'])
+        optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+    best_f1 = 0
+    if hyper_params["checkpoint_path"] is not None and os.path.isfile(hyper_params["checkpoint_path"]):
+        # evaluate the model if it is loaded from a checkpoint
+        with open(hyper_params["log_dir"] + "/gnn-load.log", "w") as log_file:
+
+            localtime = time.asctime(time.localtime(time.time()))
+            log_file.write(str(localtime) + "\n")
+
+            log_file.write("evaluate loaded model on vld set\n")
+
+            print("evaluate loaded model on vld set first")
+            _, _, _, f1 = evaluate(log_file)
+        
+        best_f1 = f1
+        if hyper_params["pretrain"]:
+                torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                }, "models/pretrain/pretrain-best.ptg")
+        else:
+            torch.save({
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            }, "models/finetune/finetune-best.ptg")
 
 
 # training loop
-for epoch in range(hyper_params["epoch_num"]):
-	print(f"epoch {epoch}\ntrain:")
-	with open(hyper_params["log_dir"] + f"/gnn-{epoch}.log", "w") as log_file:
+    for epoch in range(hyper_params["epoch_num"]):
+        print(f"epoch {epoch}\ntrain:")
+        with open(hyper_params["log_dir"] + f"/gnn-{epoch}.log", "w") as log_file:
 
-		localtime = time.asctime(time.localtime(time.time()))
-		log_file.write(str(localtime) + "\n")
+            localtime = time.asctime(time.localtime(time.time()))
+            log_file.write(str(localtime) + "\n")
 
-		log_file.write(f"epoch: {epoch}\n")
-		train_loss = train(log_file)
-		localtime = time.asctime(time.localtime(time.time()))
-		
-		print("eval:")
-		_, _, _, f1 = evaluate(log_file)
+            log_file.write(f"epoch: {epoch}\n")
+            train_loss = train(log_file)
+            localtime = time.asctime(time.localtime(time.time()))
+            
+            print("eval:")
+            _, _, _, f1 = evaluate(log_file)
 
-	if hyper_params["pretrain"]:
-		torch.save({
-			'model_state_dict': model.state_dict(),
-			'optimizer_state_dict': optimizer.state_dict(),
-			}, "models/pretrain/pretrain-" + str(epoch) + ".ptg")
-	else:
-		torch.save({
-			'model_state_dict': model.state_dict(),
-			'optimizer_state_dict': optimizer.state_dict(),
-			}, "models/finetune/finetune-" + str(epoch) + ".ptg")
+        if hyper_params["pretrain"]:
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                }, "models/pretrain/pretrain-" + str(epoch) + ".ptg")
+        else:
+            torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                }, "models/finetune/finetune-" + str(epoch) + ".ptg")
 
-	if f1 > best_f1:
-		best_f1 = f1
-		if hyper_params["pretrain"]:
-			torch.save({
-			'model_state_dict': model.state_dict(),
-			'optimizer_state_dict': optimizer.state_dict(),
-			}, "models/pretrain/pretrain-best.ptg")
-		else:
-			torch.save({
-			'model_state_dict': model.state_dict(),
-			'optimizer_state_dict': optimizer.state_dict(),
-			}, "models/finetune/finetune-best.ptg")
+        if f1 > best_f1:
+            best_f1 = f1
+            if hyper_params["pretrain"]:
+                torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                }, "models/pretrain/pretrain-best.ptg")
+            else:
+                torch.save({
+                'model_state_dict': model.state_dict(),
+                'optimizer_state_dict': optimizer.state_dict(),
+                }, "models/finetune/finetune-best.ptg")
 
-print("Done")
+    print("Done")
