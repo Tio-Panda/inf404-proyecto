@@ -365,19 +365,21 @@ if __name__ == '__main__':
 
     TRAIN_DIR = TARGET_DIR /"pt" / "pretrain" / "processed"
     VAL_DIR = TARGET_DIR / "pt" / "validation" / "processed"
+    TEST_DIR = TARGET_DIR / "pt" / "test" / "processed"
 
     TRAIN_DIR.mkdir(parents=True, exist_ok=True)
     VAL_DIR.mkdir(parents=True, exist_ok=True)
+    TEST_DIR.mkdir(parents=True, exist_ok=True)
 
     s1 = (Path("./sym_data/cnf/pretrain/"), "./pretrain_scan.csv")
     s2 = (Path("./sym_data/cnf/validation/"), "./validation_scan.csv")
-    # s3 = (Path("./data/cnf/test/"), "./test_scan.csv")
+    s3 = (Path("./sym_data/cnf/test/"), "./test_scan.csv")
     # s4 = (Path("./data/cnf/finetune/"), "./finetune_scan.txt")
 
     # s0 = s1
     # scan_dataset(s0[0], 12, s0[1])
 
-    scans = [(TRAIN_DIR, s1), (VAL_DIR, s2)]
+    scans = [(TRAIN_DIR, s1), (VAL_DIR, s2), (TEST_DIR, s3)]
     for source_path, scan in scans:
         save_dataset(scan[0], source_path, 14, scan[1])
     

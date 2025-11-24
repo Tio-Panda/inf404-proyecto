@@ -3,7 +3,8 @@ from predict import predict_cpu, merge_wcc_preds
 
 print("predict backbone on CPU")
 pt_dir_path = "./data/pt/test/processed"
-model_path = "./models/finetune/finetune-best.ptg"
+#model_path = "./models/finetune/finetune-best.ptg"
+model_path = "./best_model/pretrain-best.ptg"
 res_dir_path = "./prediction/cpu/wcc_predictions"
 merge_dir_path = "./prediction/cpu/cmb_predictions"
 

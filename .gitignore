@@ -4,6 +4,10 @@ processed_data/
 sym_data/
 data/
 models/
+results/
+prediction/
+log/
+solver/makefile
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

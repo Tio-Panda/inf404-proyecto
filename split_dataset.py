@@ -148,8 +148,9 @@ if __name__ == "__main__":
     VALIDATION_RATIO = 0.2
     TEST_RATIO = 0.1
 
-    # data_path = download_dataset(FULL_DATA_PATH)
-    # decompress_dataset(data_path, PROCESSED_DATA_PATH)
+    data_path = download_dataset(FULL_DATA_PATH)
+    
+    decompress_dataset(data_path, PROCESSED_DATA_PATH)
 
     pt_sources, ft_sources = get_source_list()
     sources = pt_sources + ft_sources

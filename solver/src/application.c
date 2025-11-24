@@ -756,7 +756,7 @@ parse_input (application * application)
 static void
 random_phase_initial (application * application) 
 {
-  kissat_random_phase_initial(application->solver);
+  random_phase_initial(application);
 }
 
 static bool
