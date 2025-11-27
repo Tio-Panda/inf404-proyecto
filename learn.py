@@ -211,7 +211,7 @@ if __name__ == "__main__":
         print("argv error! should be either pretrain or finetune!")
         exit(1)
 
-    batch_size = 200
+    batch_size = 100
 
     if hyper_params["pretrain"]:
         hyper_params["seed"] = 77

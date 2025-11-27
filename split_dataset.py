@@ -89,12 +89,12 @@ def get_filtered_cnf_list(data_path, filters, sources, n=-1, shuffle=True, seed=
 
         data += _data
 
-    if n >= 0:
-        data = data[:n]
-
     if shuffle:
         random.seed(seed)
         random.shuffle(data)
+
+    if n >= 0:
+        data = data[:n]
 
     return data
 
@@ -155,9 +155,9 @@ if __name__ == "__main__":
     pt_sources, ft_sources = get_source_list()
     sources = pt_sources + ft_sources
     
-    filters = {"KB": 6}
-    n = 5000
-    data = get_filtered_cnf_list(PROCESSED_DATA_PATH, filters, sources, n=n, shuffle=True, seed=13)
+    filters = {"KB": 10}
+    n = 20000
+    data = get_filtered_cnf_list(PROCESSED_DATA_PATH, filters, sources, n=n, shuffle=True, seed=11)
 
     print("n dataset:", len(data))
 
