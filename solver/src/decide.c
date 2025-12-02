@@ -140,6 +140,7 @@ decide_phase (kissat * solver, unsigned idx)
 
   value res = 0;
 
+
   if(GET_OPTION (neural_backbone_always)) {
       value * neural = solver->phases.neural;
         if(!res && neural)

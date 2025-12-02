@@ -27,6 +27,7 @@ struct application
   const char *backbone_path;
   const char *unsatord_path;
   double neuroback_cfd;
+  double neuroback_weight_param;
   file proof_file;
   int binary;
 #endif
@@ -412,6 +413,7 @@ parse_options (application * application, int argc, char **argv)
   const char *valstr;
 
   application->backbone_path = NULL;
+  application->neuroback_weight_param = 0.0;
   application->unsatord_path = NULL;
 
   for (int i = 1; i < argc; i++)
@@ -423,7 +425,18 @@ parse_options (application * application, int argc, char **argv)
       else if(!strncmp (arg, "--backbonefile=", 15)) {
         application->backbone_path = arg + 15;
         //kissat_set_option (solver, "neural_backbone", 1);
-        
+      }
+      else if (!strcmp (arg, "--neural_backbone_weighted")) {
+        kissat_set_option (solver, "neural_backbone_weighted", 1);
+      }
+      else if (!strncmp (arg, "--neural_backbone_weight=", 24)) {
+        sscanf(arg + 24, "%lf", &application->neuroback_weight_param);
+        if (application->neuroback_weight_param < 0.0)
+          application->neuroback_weight_param = 0.0;
+        if (application->neuroback_weight_param > 1.0)
+          application->neuroback_weight_param = 1.0;
+        int percent = (int)(application->neuroback_weight_param * 100.0 + 0.5);
+        kissat_set_option (solver, "neural_backbone_weight", percent);
       }
       else if(!strncmp (arg, "--neuroback_cfd=", 16)) {
         sscanf(arg + 16, "%lf", &application->neuroback_cfd);
