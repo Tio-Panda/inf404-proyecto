@@ -70,9 +70,9 @@ Each CNF may produce **multiple graph components**, saved as:
 
 To use the solver, please compile the solver using the following commands:
 ```bash
-cd solver
-./configure && make
-cd ..
+cd solver/build
+make
+cd ../..
 ```
 After successful compilation, the solver binary will be available at `solver/build/kissat`.
 

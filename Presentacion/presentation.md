@@ -59,7 +59,23 @@ Lo que inducia en un peor desempeño.
 
 ### Limitaciones actuales
 
+---
 
+### Modelo
+
+---
+
+### Heurísticas
+
+- solver Sistema cascada
+- implementacion sencilla pero efectiva
+- espacio para otras utilizaciones del backbone predicho
+- Neural-backbone --initial
+---
+
+### Weighted backbone
+---
+### LowScores backbone 
 ---
 ### Referencias
 
