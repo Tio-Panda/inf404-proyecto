@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 import time
 from typing import Tuple, List
+import matplotlib.pyplot as plt
 
 CNF_DIR = Path("./sym_data/cnf/test")
 BACKBONE_DIR = Path("./sym_data/backbone/test")
@@ -14,7 +15,7 @@ RESULTS_DIR.mkdir(exist_ok=True)
 COMP_EXTS = [".xz", ".bz2", ".gz", ".lzma"]
 
 
-TAKE_FRACTION: float = 1.0  
+TAKE_FRACTION: float = 1.0
 
 def remove_compression_suffix(filename: str) -> str:
     """Strip only the compression extension if present (xz, bz2, gz, lzma)."""
@@ -86,7 +87,6 @@ def run_cmd(cmd: List[str]) -> Tuple[str, float]:
     return stdout, elapsed
 
 def build_cmd_default(cnf_path: Path) -> List[str]:
-    # Use the same stable mode as the other configurations for fair comparison
     return [str(SOLVER_BINARY.resolve()), "-q", "-n", "--stable=2", str(cnf_path.resolve())]
 
 
@@ -101,7 +101,13 @@ def main():
         limit = max(1, int(len(cnf_files) * TAKE_FRACTION))
         cnf_files = cnf_files[:limit]
         print(f"Using a subset: {limit}/{len(candidate_files)} instances.")
-    summary = {"NeuroBack": [], "NeuroBack-Weighted": [], "Default": []}
+    summary = {
+        "NeuroBack-Initial": [],
+        "NeuroBack-Weighted": [],
+        "NeuroBack-LowScores": [],
+        "NeuroBack-Always": [],
+        "Default": []
+    }
 
     for cnf_file in cnf_files:
         print(f"\n=== Processing {cnf_file.name} ===")
@@ -120,19 +126,32 @@ def main():
         if backbone_xz.exists():
             backbone_file = decompress_file(backbone_xz, cnf_result_dir)
 
+        # NeuroBack-Always
+        print("Running NeuroBack-Always...")
+        if backbone_file:
+            na_out, na_time = run_cmd([
+                str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()), "-q", "-n",
+                "--stable=2", "--neural_backbone_always",
+                f"--backbonefile={backbone_file.resolve()}",
+            ])
+            summary["NeuroBack-Always"].append((cnf_file.name, na_out, na_time))
+            
+        else:
+            summary["NeuroBack-Always"].append((cnf_file.name, "NO_BACKBONE", 0.0))
 
-        # NeuroBack 
-        print("Running NeuroBack...")
+
+        # NeuroBack-Initial 
+        print("Running NeuroBack-Initial...")
         if backbone_file:
             nb_out, nb_time = run_cmd([
                 str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()), "-q", "-n",
                 "--stable=2", "--neural_backbone_initial", "--neuroback_cfd=0.9",
                 f"--backbonefile={backbone_file.resolve()}",
             ])
-            summary["NeuroBack"].append((cnf_file.name, nb_out, nb_time))
+            summary["NeuroBack-Initial"].append((cnf_file.name, nb_out, nb_time))
             
         else:
-            summary["NeuroBack"].append((cnf_file.name, "NO_BACKBONE", 0.8))
+            summary["NeuroBack-Initial"].append((cnf_file.name, "NO_BACKBONE", 0.8))
 
 
         # NeuroBack-Weighted 
@@ -140,7 +159,7 @@ def main():
         if backbone_file:
             bw_out, bw_time = run_cmd([
                 str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()), "-q", "-n",
-                "--stable=2", "--neural_backbone_weighted", "--neural_backbone_weight=0.0",
+                "--stable=2", "--neural_backbone_weighted", "--neural_backbone_weight=0.7",
                 f"--backbonefile={backbone_file.resolve()}",
             ])
             summary["NeuroBack-Weighted"].append((cnf_file.name, bw_out, bw_time))
@@ -148,6 +167,19 @@ def main():
         else:
             summary["NeuroBack-Weighted"].append((cnf_file.name, "NO_BACKBONE", 0.7))
         
+
+        # NeuroBack-LowScores
+        print("Running NeuroBack-LowScores...")
+        if backbone_file:
+            ls_out, ls_time = run_cmd([
+                str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()), "-q", "-n",
+                "--stable=2", "--neural_backbone_lowscores", "--lowscores_threshold=0.1",
+                f"--backbonefile={backbone_file.resolve()}",
+            ])
+            summary["NeuroBack-LowScores"].append((cnf_file.name, ls_out, ls_time))
+            
+        else:
+            summary["NeuroBack-LowScores"].append((cnf_file.name, "NO_BACKBONE", 0.0))
 
         # Default-Kissat
         print("Running Default-Kissat...")
@@ -158,7 +190,7 @@ def main():
 
 
     # --- PRINT SUMMARY ---
-    for config in ["NeuroBack", "NeuroBack-Weighted", "Default"]:
+    for config in ["NeuroBack-Always","NeuroBack-Initial", "NeuroBack-Weighted", "NeuroBack-LowScores", "Default"]:
         print(f"\n===== RESULTS FOR {config} =====")
         total_time = 0
         sat_count = unsat_count = error_count = no_backbone = 0

@@ -522,7 +522,8 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
   }*/
   
 		if(GET_OPTION(neural_backbone_always) 
-		  || GET_OPTION(neural_backbone_rephase)) {
+		  || GET_OPTION(neural_backbone_rephase)
+		  || GET_OPTION(neural_backbone_lowscores)) {
 
 			value* neural_phase_list = solver->phases.neural;
 			for (all_phases (neural, p))
