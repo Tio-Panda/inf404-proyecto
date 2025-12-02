@@ -467,14 +467,14 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 		}
 	}
 
-		if(GET_OPTION(neural_backbone_weighted)) {
-			// Apply weighted backbone only to initial phases: probabilistically set initial phases.
+		if(GET_OPTION(neural_backbone_partial)) {
+			
 			value* initial_phase_list = solver->phases.initial;
 			const value initial_phase = INITIAL_PHASE;
 			for (all_phases (initial, p))
 				*p = initial_phase;
 
-			const double weight = GET_OPTION(neural_backbone_weight) / 100.0;
+			const double weight = GET_OPTION(neural_backbone_partial_weight) / 100.0;
 			char line[128];
 			while (fgets(line, sizeof line, file->file)) {
 				char *p = line;

@@ -426,17 +426,17 @@ parse_options (application * application, int argc, char **argv)
         application->backbone_path = arg + 15;
         //kissat_set_option (solver, "neural_backbone", 1);
       }
-      else if (!strcmp (arg, "--neural_backbone_weighted")) {
-        kissat_set_option (solver, "neural_backbone_weighted", 1);
+      else if (!strcmp (arg, "--neural_backbone_partial")) {
+        kissat_set_option (solver, "neural_backbone_partial", 1);
       }
-      else if (!strncmp (arg, "--neural_backbone_weight=", 24)) {
-        sscanf(arg + 24, "%lf", &application->neuroback_weight_param);
+      else if (!strncmp (arg, "--neural_backbone_partial_weight=", 32)) {
+        sscanf(arg + 32, "%lf", &application->neuroback_weight_param);
         if (application->neuroback_weight_param < 0.0)
           application->neuroback_weight_param = 0.0;
         if (application->neuroback_weight_param > 1.0)
           application->neuroback_weight_param = 1.0;
         int percent = (int)(application->neuroback_weight_param * 100.0 + 0.5);
-        kissat_set_option (solver, "neural_backbone_weight", percent);
+        kissat_set_option (solver, "neural_backbone_partial_weight", percent);
       }
       else if (!strncmp (arg, "--lowscores_threshold=", 22)) {
         double threshold_val;

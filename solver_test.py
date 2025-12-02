@@ -3,7 +3,6 @@ from pathlib import Path
 import shutil
 import time
 from typing import Tuple, List
-import matplotlib.pyplot as plt
 
 CNF_DIR = Path("./sym_data/cnf/test")
 BACKBONE_DIR = Path("./sym_data/backbone/test")
@@ -86,8 +85,7 @@ def run_cmd(cmd: List[str]) -> Tuple[str, float]:
     stdout = result.stdout.strip() if result.stdout else "NO_OUTPUT"
     return stdout, elapsed
 
-def build_cmd_default(cnf_path: Path) -> List[str]:
-    return [str(SOLVER_BINARY.resolve()), "-q", "-n", "--stable=2", str(cnf_path.resolve())]
+# Removed build_cmd_default: inline the default solver invocation like other modes
 
 
 
@@ -103,7 +101,7 @@ def main():
         print(f"Using a subset: {limit}/{len(candidate_files)} instances.")
     summary = {
         "NeuroBack-Initial": [],
-        "NeuroBack-Weighted": [],
+        "NeuroBack-Partial": [],
         "NeuroBack-LowScores": [],
         "NeuroBack-Always": [],
         "Default": []
@@ -154,18 +152,18 @@ def main():
             summary["NeuroBack-Initial"].append((cnf_file.name, "NO_BACKBONE", 0.8))
 
 
-        # NeuroBack-Weighted 
-        print("Running NeuroBack-Weighted...")
+        # NeuroBack-Partial 
+        print("Running NeuroBack-Partial...")
         if backbone_file:
             bw_out, bw_time = run_cmd([
                 str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()), "-q", "-n",
-                "--stable=2", "--neural_backbone_weighted", "--neural_backbone_weight=0.7",
+                "--stable=2", "--neural_backbone_partial", "--neural_backbone_partial_weight=0.7",
                 f"--backbonefile={backbone_file.resolve()}",
             ])
-            summary["NeuroBack-Weighted"].append((cnf_file.name, bw_out, bw_time))
+            summary["NeuroBack-Partial"].append((cnf_file.name, bw_out, bw_time))
             
         else:
-            summary["NeuroBack-Weighted"].append((cnf_file.name, "NO_BACKBONE", 0.7))
+            summary["NeuroBack-Partial"].append((cnf_file.name, "NO_BACKBONE", 0.0))
         
 
         # NeuroBack-LowScores
@@ -183,14 +181,17 @@ def main():
 
         # Default-Kissat
         print("Running Default-Kissat...")
-        def_out, def_time = run_cmd(build_cmd_default(cnf_path_for_solver))
+        def_out, def_time = run_cmd([
+            str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()),
+            "-q", "-n", "--stable=2"
+        ])
         summary["Default"].append((cnf_file.name, def_out, def_time))
         
 
 
 
     # --- PRINT SUMMARY ---
-    for config in ["NeuroBack-Always","NeuroBack-Initial", "NeuroBack-Weighted", "NeuroBack-LowScores", "Default"]:
+    for config in ["NeuroBack-Always","NeuroBack-Initial", "NeuroBack-Partial", "NeuroBack-LowScores", "Default"]:
         print(f"\n===== RESULTS FOR {config} =====")
         total_time = 0
         sat_count = unsat_count = error_count = no_backbone = 0

@@ -26,9 +26,9 @@ kissat_increase_phases (kissat * solver, unsigned new_size)
   increase_phases (best);
   increase_phases (saved);
   increase_phases (target);
-  if(GET_OPTION (neural_backbone_initial) || GET_OPTION(random_phase_initial) || GET_OPTION(neural_backbone_weighted))
+  if(GET_OPTION (neural_backbone_initial) || GET_OPTION(random_phase_initial) || GET_OPTION(neural_backbone_partial))
     increase_phases (initial);
-  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase) || GET_OPTION(neural_backbone_weighted) || GET_OPTION(neural_backbone_lowscores))
+  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase) || GET_OPTION(neural_backbone_partial) || GET_OPTION(neural_backbone_lowscores))
     increase_phases (neural);
 }
 
@@ -41,9 +41,9 @@ kissat_decrease_phases (kissat * solver, unsigned new_size)
   realloc_phases (best);
   realloc_phases (saved);
   realloc_phases (target);
-  if(GET_OPTION (neural_backbone_initial) || GET_OPTION(random_phase_initial) || GET_OPTION(neural_backbone_weighted))
+  if(GET_OPTION (neural_backbone_initial) || GET_OPTION(random_phase_initial) || GET_OPTION(neural_backbone_partial))
     realloc_phases (initial);
-  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase) || GET_OPTION(neural_backbone_weighted) || GET_OPTION(neural_backbone_lowscores))
+  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase) || GET_OPTION(neural_backbone_partial) || GET_OPTION(neural_backbone_lowscores))
     realloc_phases (neural);
 }
 
@@ -57,9 +57,9 @@ kissat_release_phases (kissat * solver)
   release_phases (best, size);
   release_phases (saved, size);
   release_phases (target, size);
-  if(GET_OPTION (neural_backbone_initial) || GET_OPTION (random_phase_initial) || GET_OPTION(neural_backbone_weighted))
+  if(GET_OPTION (neural_backbone_initial) || GET_OPTION (random_phase_initial) || GET_OPTION(neural_backbone_partial))
     release_phases (initial, size);
-  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase) || GET_OPTION(neural_backbone_weighted) || GET_OPTION(neural_backbone_lowscores))
+  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase) || GET_OPTION(neural_backbone_partial) || GET_OPTION(neural_backbone_lowscores))
     release_phases (neural, size);
 }
 

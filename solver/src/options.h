@@ -53,8 +53,8 @@ OPTION( neural_backbone_always, 0, 0, 1, "always prioritize neural backbone") \
 OPTION( neural_backbone_initial, 0, 0, 1, "initial neural backbone application") \
 OPTION( neural_backbone_lowscores, 0, 0, 1, "use neural backbone only for low activity score variables") \
 OPTION( neural_backbone_rephase, 0, 0, 1, "add a neural backbone rephasing") \
-OPTION( neural_backbone_weighted, 0, 0, 1, "enable probabilistic neural-backbone selection") \
-OPTION( neural_backbone_weight, 50, 0, 100, "probability (per cent) to use neural-backbone suggestion when available") \
+OPTION( neural_backbone_partial, 0, 0, 1, "enable partial (probabilistic) neural-backbone selection") \
+OPTION( neural_backbone_partial_weight, 50, 0, 100, "probability (per cent) to use neural-backbone suggestion when available in partial mode") \
 OPTION( lowscores_threshold, 10, 0, 100, "activity threshold (per cent) for using neural backbone in lowscores mode") \
 OPTION( neural_unsatord_focused_compact, 0, 0, 1, "neural unsatcore application in the focused mode when compact happens") \
 OPTION( neural_unsatord_focused_initial, 0, 0, 1, "neural unsatcore application in the focused mode in the initital state") \

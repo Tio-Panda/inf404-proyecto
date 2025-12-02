@@ -8,10 +8,12 @@ paginate: true
 ## NeuroBack: Análisis y lineas de investigación.
 ##### Integrantes:
 - Matías Sandoval
+- Nicolas Barahona
 - Fernando Salgado
 - Sebastián Gutierrez
-- José Pinto
 - Sophia Escobar 
+- José Pinto
+
 
 ---
 ### Punteo:
@@ -61,22 +63,39 @@ Lo que inducia en un peor desempeño.
 
 ---
 
-### Modelo
+### Modelo:
 
 ---
 
 ### Heurísticas
 
-- solver Sistema cascada
-- implementacion sencilla pero efectiva
-- espacio para otras utilizaciones del backbone predicho
-- Neural-backbone --initial
+- Neuroback-Kissat funciona con Sistema cascada.
+- Implementacion sencilla pero efectiva.
+- Neural-backbone  --initial (principal).
+- Neural-backbone  --always.  
+<br>
+
+Espacio para otras utilizaciones del backbone predicho.
+
 ---
 
-### Weighted backbone
+### Heurísticas: Partial backbone
+
+- Heurística estocástica.
+- Utilizar una fracción del backbone predicho.
+- Puede ayudar en problemas donde el backbone predicho no es completamente correcto.
+
 ---
-### LowScores backbone 
+
+### Heurísticas: LowScores backbone 
+
+- Kissat utiliza VSIDS como heurística. 
+- Utilizar el backbone solo a variables poco activas.
+    - Variables de alta actividad: VSIDS ha demostrado ser confiable → se sigue usando VSIDS.
+    - Variables de baja actividad: VSIDS es menos informativo → aquí las predicciones de la GNN pueden aportar valor.
+
 ---
+
+
 ### Referencias
-
 - Wenxi Wang et al., "NeuroBack: Improving CDCL SAT Solving using Graph Neural Networks", arXiv:2110.14053 
