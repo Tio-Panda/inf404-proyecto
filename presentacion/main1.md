@@ -196,6 +196,24 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 - **Dependencia de la heuristica de ordenamiento**: Si nuestra heurística para ordenar los nodos al aplanar el grafo es mala, podríamos tener problemas para encontrar las relaciones.
 
 ---
+# NeuroBackMamba - Results
+
+| Solver      | Total Solved | Mean Time (Solved) | Median Time (Solved) | Median Speedup vs Default | Max Time (Solved) | Unsolved/Error |
+|------------|-------------:|------------------:|-------------------:|-------------------------:|-----------------:|---------------:|
+| Default    | 1898         | 0.0393s           | 0.0020s            | N/A                      | 13.79s           | 0              |
+| NeuroBack  | 1869         | 0.0382s           | 0.0023s            | 0.883x                   | 9.12s            | 29             |
+| Mamba      | 1869         | 0.0380s           | 0.0023s            | 0.873x                   | 8.99s            | 29             |
+
+---
+
+# NeuroBackMamba - Results
+
+<div style="display: flex; gap: 20px; justify-content: center;">
+  <img src="image-5.png" alt="Result 1" width="45%">
+  <img src="image-6.png" alt="Result 2" width="45%">
+</div>
+
+---
 
 # Heurísticas
 
