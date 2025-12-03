@@ -60,7 +60,9 @@ Lo que inducia en un peor desempeño.
 ---
 
 ### Limitaciones actuales
-
+- No se compara el uso de otras arquitecturas de GNN.
+- La utilización del backbone predicho se realiza solo 1 vez. 
+- Las heurísticas son "sencillas" al basarse en Kissat.
 ---
 
 ### Modelo:
@@ -85,7 +87,7 @@ Lo que inducia en un peor desempeño.
 
 - Initial backbone
     - Utilización de la red solo para el signo inicial
-- Always backbone.
+- Añways backbone.
     - Priorización del uso de la red para todas las decisiones
 - Admiten como posible variable de backbone si la confianza es alta
 - Por cada una, se elige variable, se asigna fase, y se propaga
@@ -115,6 +117,30 @@ Lo que inducia en un peor desempeño.
     - Variables de alta actividad: VSIDS ha demostrado ser confiable → se sigue usando VSIDS.
     - Variables de baja actividad: VSIDS es menos informativo → aquí las predicciones de la GNN pueden aportar valor.
 
+---
+### Resultados
+![width:700px](Resultado_NeuroBack_cactus_plot.png)
+
+---
+### Resultados: Estadísticas Promedio
+
+| Método | Conf. | Dec. | Prop. | Rest. |
+|--------|-------|-------|-------|-------|
+| Kissat-Default | 4180.27 | 4794.67 | 103735.14 | 1.39  |
+| NeuroBack-Initial | 3008.45 | 3440.61 | 71466.02 | 1.09 |
+| NeuroBack-Always | 4288.21 | 4896.27 | 94072.07 | 1.41 |
+| NeuroBack-Partial | 3918.71 | 4524.27 | 107093.13  | 1.31 |
+| NeuroBack-Prioritized | 3959.69 | 4537.95 | 96460.14 | 1.32 |
+| NeuroBack-LowScores | 4486.98 | 5026.29 | 107783.91 | 1.44 |
+
+---
+### Resultados
+- En promedio NeuroBack-Initial tuvo mejor rendimiento.
+    - Menor tiempo de ejecución, y menos restarts.
+- Las heurísticas implemtentadas tienen en general peor rendimiento que NeuroBack-Initial pero mejor que kissat-default.
+- Partial y prioritized destacan del resto.
+---
+### Discusión y conclusiones
 ---
 
 
