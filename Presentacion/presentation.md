@@ -71,11 +71,24 @@ Lo que inducia en un peor desempeño.
 
 - Neuroback-Kissat funciona con Sistema cascada.
 - Implementacion sencilla pero efectiva.
-- Neural-backbone  --initial (principal).
-- Neural-backbone  --always.  
-<br>
+- Preexistentes
+    - Neural-backbone  --initial (principal).
+    - Neural-backbone  --always.
+- Propuestas
+    - Partial-backbone
+    - Prioritized-backbone
+    - LowScores-backbones
 
-Espacio para otras utilizaciones del backbone predicho.
+---
+
+### Heurísticas: Initial/Always backbone
+
+- Initial backbone
+    - Utilización de la red solo para el signo inicial
+- Heurística estocástica.
+    - Priorización del uso de la red para todas las decisiones
+- Admiten como posible variable de backbone si la confianza es alta
+- Por cada una, se elige variable, se asigna fase, y se propaga
 
 ---
 
@@ -84,6 +97,14 @@ Espacio para otras utilizaciones del backbone predicho.
 - Heurística estocástica.
 - Utilizar una fracción del backbone predicho.
 - Puede ayudar en problemas donde el backbone predicho no es completamente correcto.
+
+---
+
+### Heurísticas: Prioritized backbone 
+
+- Heurística de variable branching
+- La cola de decisión se ordena según probabilidad de predicción
+- Posterior a esto, se aplica phase selection
 
 ---
 
