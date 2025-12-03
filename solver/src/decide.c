@@ -4,6 +4,7 @@
 #include "inlinequeue.h"
 
 #include <inttypes.h>
+#include <float.h>
 
 static unsigned
 last_enqueued_unassigned_variable (kissat * solver, 
@@ -96,12 +97,63 @@ kissat_next_decision_variable (kissat * solver)
     if(solver->apply_unsatord_stable) {
       res = decide_next_unsatord(solver);
       if (res == 0) {
-        largest_score_unassigned_variable (solver);
+        res = largest_score_unassigned_variable (solver);
         solver->apply_unsatord_stable = false;
       }
     }
-    else
+    else {
       res = largest_score_unassigned_variable (solver);
+      
+      if (GET_OPTION(neural_backbone_lowscores)) {
+        heap *scores = SCORES;
+        const value *const values = solver->values;
+        value *neural = solver->phases.neural;
+        int neural_count = 0;
+        if (neural) {
+          double total_score = 0.0;
+          unsigned count = 0;
+          {
+            unsigned *heap_stack = BEGIN_STACK (scores->stack);
+            const unsigned heap_size = SIZE_STACK (scores->stack);
+            for (unsigned i = 0; i < heap_size; ++i)
+              {
+                const unsigned v = heap_stack[i];
+                const double s = kissat_get_heap_score (scores, v);
+                total_score += s;
+                count++;
+              }
+          }
+          if (count > 0 && total_score > 0) {
+            double avg_score = total_score / count;
+            double res_score = kissat_get_heap_score(scores, res);
+            double norm_activity = res_score / avg_score;
+            double threshold_ratio = GET_OPTION(lowscores_threshold) / 100.0;
+            if (norm_activity < threshold_ratio) {
+              bool found = false;
+              unsigned best_idx = 0;
+              double best_score = DBL_MAX;
+              for (all_variables(idx)) {
+                if (!ACTIVE(idx)) continue;
+                if (VALUE(LIT(idx))) continue;
+                if (!neural) continue;
+                  if (neural[idx] == 0) continue;
+                double idx_score = kissat_get_heap_score(scores, idx);
+                if (idx_score < best_score) {
+                  best_score = idx_score;
+                  best_idx = idx;
+                  found = true;
+                }
+              }
+              if (found) {
+                res = best_idx;
+                LOG ("lowscores mode: replaced VSIDS by backbone-min-score %s (score %g, threshold_ratio %.3f)",
+                     LOGVAR(res), best_score, threshold_ratio);
+              }
+            }
+          }
+        }
+      }
+    }
   }
   else {
     if(solver->apply_unsatord_focused) {
@@ -140,6 +192,7 @@ decide_phase (kissat * solver, unsigned idx)
 
   value res = 0;
 
+
   if(GET_OPTION (neural_backbone_always)) {
       value * neural = solver->phases.neural;
         if(!res && neural)
@@ -160,7 +213,7 @@ decide_phase (kissat * solver, unsigned idx)
 
   if (!res)
     {
-      if(GET_OPTION (neural_backbone_initial) || GET_OPTION (random_phase_initial)) {
+      if(GET_OPTION (neural_backbone_initial) || GET_OPTION (random_phase_initial) || GET_OPTION(neural_backbone_partial) || GET_OPTION(neural_backbone_prioritize)) {
         value *initial = solver->phases.initial + idx;
         res = *initial; 
       }

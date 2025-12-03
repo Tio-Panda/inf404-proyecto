@@ -4,8 +4,10 @@
 #include "print.h"
 #include "profile.h"
 #include "resize.h"
+#include "random.h"
 
 #include <ctype.h>
+#include <string.h>
 #include <inttypes.h>
 
 static int
@@ -89,6 +91,7 @@ parse_dimacs (kissat * solver, strictness strict,
 	      ch = NEXT ();
 	      if (ch != '-')
 		goto COMPLETE;
+		fprintf(stderr, "DEBUG: Prioritize mode active\n");
 
 	      char name[32];
 	      unsigned pos = 0;
@@ -131,7 +134,6 @@ parse_dimacs (kissat * solver, strictness strict,
 		    goto COMPLETE;
 		  arg *= 10;
 		  int digit = ch - '0';
-		  if (INT_MAX - digit < arg)
 		    goto COMPLETE;
 		  arg += digit;
 		}
@@ -163,7 +165,13 @@ parse_dimacs (kissat * solver, strictness strict,
 	  else
 #endif
 	    {
-	      while ((ch = NEXT ()) != '\n')
+              while ((ch = NEXT ()) != '\n')
+                if (ch == EOF)
+                  {
+                    if (strict != PEDANTIC_PARSING)
+                      break;
+                    return "unexpected end-of-file in header comment";
+                  }
 #if !defined(NOPTIONS) && defined(EMBEDDED)
 	      COMPLETE:
 #endif
@@ -420,93 +428,169 @@ void kissat_random_phase_initial(kissat * solver) {
 void
 kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
   
-  if(GET_OPTION(neural_backbone_initial)) {
-    value* initial_phase_list = solver->phases.initial;
-    const value initial_phase = INITIAL_PHASE;
-    //printf("INITIAL_PHASE %d\n", INITIAL_PHASE);
-    for (all_phases (initial, p))
-      *p = initial_phase;
+	if(GET_OPTION(neural_backbone_initial)) {
+		value* initial_phase_list = solver->phases.initial;
+		const value initial_phase = INITIAL_PHASE;
+		for (all_phases (initial, p))
+			*p = initial_phase;
 
-    //printf("neuralback_cfd %lf\n", neuralback_cfd);
-	
-	  int eidx;
-	  double score;
-	  while(fscanf(file->file, "%d,%lf", &eidx, &score)!=EOF) {
-		  import *import = &PEEK_STACK (solver->import, eidx);
-		  //printf("edix %d score %lf\n", eidx, score);
+		unsigned applied = 0;
 
-		  if(score >= neuralback_cfd) {
-		  	initial_phase_list[IDX (import->lit)] = -1;
-		  }
-		  else if(score < 1.0 - neuralback_cfd) {
-		  	initial_phase_list[IDX (import->lit)] = 1;
-		  }
-	  }
-  }
+		char line[128];
+		while (fgets(line, sizeof line, file->file)) {
+			char *p = line;
+			while (*p == ' ' || *p == '\t') p++;
+			if (!*p || *p == '\n' || *p == '\r') continue;
 
-  /*if(GET_OPTION(neural_backbone_rephase)) {
-    value* neural_phase_list = solver->phases.neural;
-    //const value initial_phase = INITIAL_PHASE;
-    for (all_phases (neural, p))
-      *p = 0; //initial_phase;
+			// Try CSV format first (with confidence scores)
+			if (strchr(p, ',')) {
+				int eidx; double score;
+				if (sscanf(p, "%d , %lf", &eidx, &score) == 2) {
+					if (eidx > 0 && (size_t)eidx < SIZE_STACK(solver->import)) {
+						import *import = &PEEK_STACK (solver->import, eidx);
+						if(score >= neuralback_cfd) {
+							initial_phase_list[IDX (import->lit)] = -1;
+							applied++;
+						} else if(score <= 1.0 - neuralback_cfd) {
+							initial_phase_list[IDX (import->lit)] = 1;
+							applied++;
+						}
+					}
+				}
+				continue;
+			}
 
-	  int x;
-	  int eidx;
-	  int sign;
-	  while(fscanf(file->file, "%d", &x)!=EOF) {
-		  //printf("x: %d\n",x);
-		  if(x < 0) {
-			  sign = -1;
-		    eidx = -x;
-		  }
-		  else {
-			  sign = 1;
-			  eidx = x;
-		  }
+			// Fall back to simple format (signed literals)
+			int eidx = 0, sign = 1;
+			if (*p == 'b' || *p == 'B') {
+				p++;
+				while (*p == ' ' || *p == '\t') p++;
+			}
+			if (*p == '-' || *p == '+') {
+				if (*p == '-') sign = -1;
+				p++;
+			}
+			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+				if ((size_t)eidx < SIZE_STACK(solver->import)) {
+					import *import = &PEEK_STACK (solver->import, eidx);
+						initial_phase_list[IDX (import->lit)] = sign;
+						applied++;
+				}
+			}
+		}
+	}
 
-		  import *import = &PEEK_STACK (solver->import, eidx);
-		  neural_phase_list[IDX (import->lit)] = sign;
-	  }
+	if(GET_OPTION(neural_backbone_prioritize)) {
+		rewind(file->file);
+		value* initial_phase_list = solver->phases.initial;
+		const value initial_phase = INITIAL_PHASE;
+		for (all_phases (initial, p))
+			*p = initial_phase;
 
-  }*/
-  
-  if(GET_OPTION(neural_backbone_always) 
-  	|| GET_OPTION(neural_backbone_rephase)) {
-  	
-    value* neural_phase_list = solver->phases.neural;
-    for (all_phases (neural, p))
-      *p = 0;
+		unsigned applied = 0;
 
-	  int x;
-	  int eidx;
-	  int sign;
-	  while(fscanf(file->file, "%d", &x)!=EOF) {
-		  //printf("x: %d\n",x);
-		  if(x < 0) {
-			  sign = -1;
-		    eidx = -x;
-		  }
-		  else {
-			  sign = 1;
-			  eidx = x;
-		  }
+		char line[128];
+		while (fgets(line, sizeof line, file->file)) {
+			char *p = line;
+			while (*p == ' ' || *p == '\t') p++;
+			if (!*p || *p == '\n' || *p == '\r') continue;
 
-		  import *import = &PEEK_STACK (solver->import, eidx);
-		  neural_phase_list[IDX (import->lit)] = sign;
-	  }
-  }
- 
-}
+			if (strchr(p, ',')) {
+				int eidx; double score;
+			if (sscanf(p, "%d , %lf", &eidx, &score) == 2) {
+					if (eidx > 0 && (size_t)eidx < SIZE_STACK(solver->import)) {
+						import *import = &PEEK_STACK (solver->import, eidx);
+						if(score >= neuralback_cfd) {
+							initial_phase_list[IDX (import->lit)] = -1;
+							applied++;
+						} else if(score <= 1.0 - neuralback_cfd) {
+							initial_phase_list[IDX (import->lit)] = 1;
+							applied++;
+						}
+					}
+				}
+				continue;
+			}
+
+			int eidx = 0, sign = 1;
+			if (*p == 'b' || *p == 'B') { p++; while (*p==' '||*p=='\t') p++; }
+			if (*p == '-' || *p == '+') { if (*p=='-') sign=-1; p++; }
+		if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+				if ((size_t)eidx < SIZE_STACK(solver->import)) {
+					import *import = &PEEK_STACK (solver->import, eidx);
+					initial_phase_list[IDX (import->lit)] = sign;
+					applied++;
+				}
+			}
+		}
+	}
+
+	if(GET_OPTION(neural_backbone_partial)) {
+		rewind(file->file);
+		value* initial_phase_list = solver->phases.initial;
+		const value initial_phase = INITIAL_PHASE;
+		for (all_phases (initial, p))
+			*p = initial_phase;
+
+		unsigned applied = 0;
+
+		const double weight = GET_OPTION(neural_backbone_partial_weight) / 100.0;
+		char line[128];
+		while (fgets(line, sizeof line, file->file)) {
+			char *p = line;
+			while (*p == ' ' || *p == '\t') p++;
+			if (!*p || *p == '\n' || *p == '\r') continue;
+			if (*p == 'b' || *p == 'B') { p++; while (*p==' '||*p=='\t') p++; }
+			int sign = 1, eidx = 0;
+			if (*p == '-' || *p == '+') { if (*p=='-') sign=-1; p++; }
+			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+				if ((size_t)eidx < SIZE_STACK(solver->import)) {
+					const double rnd = kissat_pick_double(&solver->random);
+					if (rnd < weight) {
+						import *import = &PEEK_STACK (solver->import, eidx);
+							initial_phase_list[IDX (import->lit)] = sign;
+							applied++;
+					}
+				}
+			}
+		}
+	}
+
+		if(GET_OPTION(neural_backbone_always) 
+		  || GET_OPTION(neural_backbone_rephase)
+		  || GET_OPTION(neural_backbone_lowscores)) {
+
+			rewind(file->file);
+			value* neural_phase_list = solver->phases.neural;
+			for (all_phases (neural, p))
+				*p = 0;
+
+		unsigned applied = 0;
+
+		char line[128];
+		while (fgets(line, sizeof line, file->file)) {
+			char *p = line;
+			while (*p == ' ' || *p == '\t') p++;
+			if (!*p || *p == '\n' || *p == '\r') continue;
+			if (*p == 'b' || *p == 'B') { p++; while (*p==' '||*p=='\t') p++; }
+			int sign = 1, eidx = 0;
+			if (*p == '-' || *p == '+') { if (*p=='-') sign=-1; p++; }
+			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+				if ((size_t)eidx < SIZE_STACK(solver->import)) {
+					import *import = &PEEK_STACK (solver->import, eidx);
+						neural_phase_list[IDX (import->lit)] = sign;
+						applied++;
+				}
+			}
+		}
+  }}
 
 void
 kissat_parse_unsatord (kissat * solver, file * file) {
   
   unsigned eidx;
 
-  //printf("parse neural_unsatord in stable parse.c&&&&&&&&\n");
   while(fscanf(file->file, "%u", &eidx)!=EOF) {
-		//num++;
-		//printf("eidx %u\n", eidx);
 		kissat_add_unsatord (solver, eidx);
 	}
 

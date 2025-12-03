@@ -27,6 +27,7 @@ struct application
   const char *backbone_path;
   const char *unsatord_path;
   double neuroback_cfd;
+  double neuroback_weight_param;
   file proof_file;
   int binary;
 #endif
@@ -412,6 +413,7 @@ parse_options (application * application, int argc, char **argv)
   const char *valstr;
 
   application->backbone_path = NULL;
+  application->neuroback_weight_param = 0.0;
   application->unsatord_path = NULL;
 
   for (int i = 1; i < argc; i++)
@@ -422,12 +424,9 @@ parse_options (application * application, int argc, char **argv)
 	       arg, i == 1 ? "single" : "first");
       else if(!strncmp (arg, "--backbonefile=", 15)) {
         application->backbone_path = arg + 15;
-        //kissat_set_option (solver, "neural_backbone", 1);
-        
       }
       else if(!strncmp (arg, "--neuroback_cfd=", 16)) {
         sscanf(arg + 16, "%lf", &application->neuroback_cfd);
-        //printf("application->neuroback_cfd %lf\n", application->neuroback_cfd);
       }
       else if(!strncmp (arg, "--unsatord=", 11)) {
         application->unsatord_path = arg + 11;
@@ -504,6 +503,12 @@ parse_options (application * application, int argc, char **argv)
   kissat_set_option (solver, "neural_backbone_always", 1);
       else if (!strcmp (arg, "--neural_backbone_initial"))
   kissat_set_option (solver, "neural_backbone_initial", 1);
+      else if (!strcmp (arg, "--neural_backbone_lowscores"))
+        solver->options.neural_backbone_lowscores = 1;
+      else if (!strcmp (arg, "--neural_backbone_prioritize"))
+        solver->options.neural_backbone_prioritize = 1;
+      else if (!strcmp (arg, "--neural_backbone_partial"))
+    solver->options.neural_backbone_partial = 1;
       else if (!strcmp (arg, "--neural_backbone_rephase"))
   kissat_set_option (solver, "neural_backbone_rephase", 1);
       else if (!strcmp (arg, "--neural_unsatord_focused"))
@@ -988,9 +993,11 @@ run_application (kissat * solver,
 				  application.max_var, application.partial);
 	}
     }
-#ifndef QUIET
-  kissat_print_statistics (solver);
-#endif
+  /* Print statistics when requested with -s, even if running in quiet mode
+   * (some scripts pass -q to suppress normal output). Keep printing also
+   * when not in quiet mode for backward compatibility. */
+  if (GET_OPTION (statistics) || !GET_OPTION (quiet))
+    kissat_print_statistics (solver);
 #ifndef NPROOFS
   close_proof (&application);
 #endif

@@ -1,1 +1,1 @@
-/home/panda/code/usm/lca/inf404-proyecto/solver/makefile
+/home/matty/USM/Logica/inf404-proyecto/solver/makefile

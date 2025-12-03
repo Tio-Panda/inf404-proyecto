@@ -51,7 +51,12 @@ OPTION( minimizeticks, 1, 0, 1, "count ticks in minimize and shrink") \
 OPTION( modeinit, 1e3, 10, 1e8, "initial focused conflicts limit") \
 OPTION( neural_backbone_always, 0, 0, 1, "always prioritize neural backbone") \
 OPTION( neural_backbone_initial, 0, 0, 1, "initial neural backbone application") \
+OPTION( neural_backbone_prioritize, 0, 0, 1, "apply backbone probability-based initial phases") \
+OPTION( neural_backbone_lowscores, 0, 0, 1, "use neural backbone only for low activity score variables") \
 OPTION( neural_backbone_rephase, 0, 0, 1, "add a neural backbone rephasing") \
+OPTION( neural_backbone_partial, 0, 0, 1, "enable partial (probabilistic) neural-backbone selection") \
+OPTION( neural_backbone_partial_weight, 50, 0, 100, "probability (per cent) to use neural-backbone suggestion when available in partial mode") \
+OPTION( lowscores_threshold, 120, 100, 300, "max ratio of selected score to avg score (per cent) for using backbone in lowscores mode") \
 OPTION( neural_unsatord_focused_compact, 0, 0, 1, "neural unsatcore application in the focused mode when compact happens") \
 OPTION( neural_unsatord_focused_initial, 0, 0, 1, "neural unsatcore application in the focused mode in the initital state") \
 OPTION( neural_unsatord_stable_compact, 0, 0, 1, "neural unsatcore application in the stable mode when compact happens") \

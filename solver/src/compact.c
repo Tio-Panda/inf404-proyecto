@@ -125,9 +125,9 @@ compact_literal (kissat * solver, unsigned dst_lit, unsigned src_lit)
   solver->phases.best[dst_idx] = solver->phases.best[src_idx];
   solver->phases.saved[dst_idx] = solver->phases.saved[src_idx];
   solver->phases.target[dst_idx] = solver->phases.target[src_idx];
-  if(GET_OPTION (neural_backbone_initial) || GET_OPTION(random_phase_initial)) 
+  if(GET_OPTION (neural_backbone_initial) || GET_OPTION(random_phase_initial) || GET_OPTION(neural_backbone_partial) || GET_OPTION(neural_backbone_prioritize)) 
     solver->phases.initial[dst_idx] = solver->phases.initial[src_idx];
-  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase)) 
+  if(GET_OPTION (neural_backbone_always) || GET_OPTION(neural_backbone_rephase) || GET_OPTION(neural_backbone_partial) || GET_OPTION(neural_backbone_lowscores)) 
     solver->phases.neural[dst_idx] = solver->phases.neural[src_idx];
 
   const unsigned not_src_lit = NOT (src_lit);
