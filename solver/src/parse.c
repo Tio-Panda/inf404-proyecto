@@ -510,33 +510,33 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 		}
 	}
 
-		if(GET_OPTION(neural_backbone_weighted)) {
-			// Apply weighted backbone only to initial phases: probabilistically set initial phases.
-			value* initial_phase_list = solver->phases.initial;
-			const value initial_phase = INITIAL_PHASE;
-			for (all_phases (initial, p))
-				*p = initial_phase;
+	if(GET_OPTION(neural_backbone_partial)) {
+		// Apply weighted backbone only to initial phases: probabilistically set initial phases.
+		value* initial_phase_list = solver->phases.initial;
+		const value initial_phase = INITIAL_PHASE;
+		for (all_phases (initial, p))
+			*p = initial_phase;
 
-			const double weight = GET_OPTION(neural_backbone_weight) / 100.0;
-			char line[128];
-			while (fgets(line, sizeof line, file->file)) {
-				char *p = line;
-				while (*p == ' ' || *p == '\t') p++;
-				if (!*p || *p == '\n' || *p == '\r') continue;
-				if (*p == 'b' || *p == 'B') { p++; while (*p==' '||*p=='\t') p++; }
-				int sign = 1, eidx = 0;
-				if (*p == '-' || *p == '+') { if (*p=='-') sign=-1; p++; }
-				if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
-					if ((size_t)eidx < SIZE_STACK(solver->import)) {
-						const double rnd = kissat_pick_double(&solver->random);
-						if (rnd < weight) {
-							import *import = &PEEK_STACK (solver->import, eidx);
-							initial_phase_list[IDX (import->lit)] = sign;
-						}
+		const double weight = GET_OPTION(neural_backbone_partial_weight) / 100.0;
+		char line[128];
+		while (fgets(line, sizeof line, file->file)) {
+			char *p = line;
+			while (*p == ' ' || *p == '\t') p++;
+			if (!*p || *p == '\n' || *p == '\r') continue;
+			if (*p == 'b' || *p == 'B') { p++; while (*p==' '||*p=='\t') p++; }
+			int sign = 1, eidx = 0;
+			if (*p == '-' || *p == '+') { if (*p=='-') sign=-1; p++; }
+			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+				if ((size_t)eidx < SIZE_STACK(solver->import)) {
+					const double rnd = kissat_pick_double(&solver->random);
+					if (rnd < weight) {
+						import *import = &PEEK_STACK (solver->import, eidx);
+						initial_phase_list[IDX (import->lit)] = sign;
 					}
 				}
 			}
 		}
+	}
 
   /*if(GET_OPTION(neural_backbone_rephase)) {
     value* neural_phase_list = solver->phases.neural;
@@ -565,7 +565,8 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
   }*/
   
 		if(GET_OPTION(neural_backbone_always) 
-		  || GET_OPTION(neural_backbone_rephase)) {
+		  || GET_OPTION(neural_backbone_rephase)
+		  || GET_OPTION(neural_backbone_lowscores)) {
 
 			value* neural_phase_list = solver->phases.neural;
 			for (all_phases (neural, p))
