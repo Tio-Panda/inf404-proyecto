@@ -12,7 +12,7 @@ footer: INF404
 # Modificaciones de NeuroBack
 
 <div style="position:relative; top: 90px; text-align: center">
-Sebastián Gutiérrez, Jose Pinto,  <br>
+Sebastián Gutiérrez, Jose Pinto, Nicolás Barahona, Matías Sandoval, Fernando Salgado y Sophia Escobar <br>
 Nombre, Nombre
 
 <div style="text-align:center;">
@@ -48,23 +48,17 @@ Nombre, Nombre
   <div class="beam-toc-item">
       <div class="beam-number"></div>
       <div class="beam-content">
-          <h3 class="beam-section-title">Marco teórico</h3>
+          <h3 class="beam-section-title">Modelo Neuroback</h3>
       </div>
   </div>
     
   <div class="beam-toc-item">
       <div class="beam-number"></div>
       <div class="beam-content">
-          <h3 class="beam-section-title">Problema</h3>
+          <h3 class="beam-section-title">Heurísticas</h3>
       </div>
   </div>
   
-  <div class="beam-toc-item">
-      <div class="beam-number"></div>
-      <div class="beam-content">
-          <h3 class="beam-section-title">Solución</h3>
-      </div>
-  </div>
 
   <div class="beam-toc-item">
       <div class="beam-number"></div>
@@ -82,7 +76,40 @@ Nombre, Nombre
 </div>
 
 ---
-# Neuroback
+
+# NeuroBack
+
+- Objetivo: mejorar solvers CDCL para SAT usando Graph Neural Networks de forma práctica y eficiente.
+- Busca predecir las "fases" mayoritarias de variables (backbone) con una GNN una sola vez antes de resolver y aplicar esas predicciones durante la búsqueda, evitando inferencias frecuentes en GPU mientras ejecuta el solver.
+
+---
+
+# NeuroBack: Estado del arte
+
+Los métodos previos similares a Neuroback como Janota(2010), NeuroSat o NeuroCore:
+- No mejoraban los resultados.
+- Requerían frecuentes inferencias online en GPU.
+Lo que inducia en un peor desempeño.
+---
+
+# NeuroBack: Método
+
+- Representación: grafo CNF (nodos de variables y cláusulas, aristas según incidencia). 
+![width:200px](Graph_cnf.png)
+- GNN que predice la fase mayoritaria (Backbone) para cada variable.
+- Las predicciones se fijan/inyectan como sugerencias iniciales para el solver; el solver sigue siendo CDCL pero con mejor punto de partida.
+
+---
+
+# NeuroBack 
+
+- DataBack: nuevo dataset con 120,286 muestras para entrenar el modelo.
+- Integración con el solver Kissat, mostrando mejoras en problemas resueltos (+5.2% en SATCOMP-2022, +7.4% en SATCOMP-2023).
+- Demuestra que una inferencia offline bien entrenada puede ser suficiente para proporcionar señales útiles a heurísticas clásicas.
+
+
+---
+# Modelo Neuroback
 
 Es una arquitectura hibrida de Graph Transformer disenada para superar las limitaciones de memoria (self-attention $O(N^2)$) para formulas SAT muy grandes.
 
@@ -204,7 +231,7 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 - **Contexto global**: Neuroback, sacrifica tener un contexto global para poder bajar su complejidad.
 
 ---
-# NeuroBackMamba - Ventajas
+# NeuroBackMamba - Desentajas
 
 - **Perdida de topologia**: Al aplanar el grafo, perdemos la estructura explicita de quien es vecino de quien.
 
