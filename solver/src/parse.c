@@ -7,6 +7,7 @@
 
 #include <ctype.h>
 #include <inttypes.h>
+#include <string.h>
 
 static int
 next (file * file, uint64_t * lineno_ptr)
@@ -417,88 +418,127 @@ void kissat_random_phase_initial(kissat * solver) {
       
 }
 
-void
-kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
-  
-  if(GET_OPTION(neural_backbone_initial)) {
-    value* initial_phase_list = solver->phases.initial;
-    const value initial_phase = INITIAL_PHASE;
-    //printf("INITIAL_PHASE %d\n", INITIAL_PHASE);
-    for (all_phases (initial, p))
-      *p = initial_phase;
+void kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
+    
+    // Si ninguna opción relevante está activa, salimos
+    if (!GET_OPTION(neural_backbone_initial) && !GET_OPTION(neural_backbone_always) && !GET_OPTION(neural_backbone_rephase)) {
+        return;
+    }
 
-    //printf("neuralback_cfd %lf\n", neuralback_cfd);
-	
-	  int eidx;
-	  double score;
-	  while(fscanf(file->file, "%d,%lf", &eidx, &score)!=EOF) {
-		  import *import = &PEEK_STACK (solver->import, eidx);
-		  //printf("edix %d score %lf\n", eidx, score);
+    printf("[NEUROBACK DEBUG] Iniciando parser híbrido. Umbral CFD: %.4f\n", neuralback_cfd);
 
-		  if(score >= neuralback_cfd) {
-		  	initial_phase_list[IDX (import->lit)] = -1;
-		  }
-		  else if(score < 1.0 - neuralback_cfd) {
-		  	initial_phase_list[IDX (import->lit)] = 1;
-		  }
-	  }
-  }
+    // Puntero al array que vamos a modificar
+    value* target_phase_list;
+    
+    if (GET_OPTION(neural_backbone_initial)) {
+        printf("[NEUROBACK DEBUG] Modo: INITIAL\n");
+        target_phase_list = solver->phases.initial;
+        const value init_val = INITIAL_PHASE;
+        for (all_phases (initial, p)) *p = init_val;
+    } else {
+        printf("[NEUROBACK DEBUG] Modo: ALWAYS/NEURAL\n");
+        target_phase_list = solver->phases.neural;
+        for (all_phases (neural, p)) *p = 0;
+    }
 
-  /*if(GET_OPTION(neural_backbone_rephase)) {
-    value* neural_phase_list = solver->phases.neural;
-    //const value initial_phase = INITIAL_PHASE;
-    for (all_phases (neural, p))
-      *p = 0; //initial_phase;
+    if (GET_OPTION(neural_backbone_modified)) {
+        printf("[NEUROBACK DEBUG] Estrategia MODIFIED (Rebeldía) activada.\n");
+    }
 
-	  int x;
-	  int eidx;
-	  int sign;
-	  while(fscanf(file->file, "%d", &x)!=EOF) {
-		  //printf("x: %d\n",x);
-		  if(x < 0) {
-			  sign = -1;
-		    eidx = -x;
-		  }
-		  else {
-			  sign = 1;
-			  eidx = x;
-		  }
+    char line[256];
+    int lines_processed = 0;
+    int assignments_made = 0;
+    
+    // Leemos línea por línea
+    while (fgets(line, sizeof(line), file->file)) {
+        char *p = line;
+        
+        // Saltar espacios en blanco al inicio
+        while (*p == ' ' || *p == '\t') p++;
+        
+        // Ignorar líneas vacías o comentarios
+        if (!*p || *p == '\n' || *p == '\r' || *p == 'c') continue;
 
-		  import *import = &PEEK_STACK (solver->import, eidx);
-		  neural_phase_list[IDX (import->lit)] = sign;
-	  }
+        lines_processed++;
+        bool debug = (lines_processed <= 20); // Solo loguear las primeras 20 líneas
 
-  }*/
-  
-  if(GET_OPTION(neural_backbone_always) 
-  	|| GET_OPTION(neural_backbone_rephase)) {
-  	
-    value* neural_phase_list = solver->phases.neural;
-    for (all_phases (neural, p))
-      *p = 0;
+        // --- CASO 1: FORMATO CSV (Predicción Neuronal) ---
+        if (strchr(p, ',')) {
+            int eidx; 
+            double score;
+            if (sscanf(p, "%d , %lf", &eidx, &score) == 2) {
+                if (eidx > 0 && (size_t)eidx < SIZE_STACK(solver->import)) {
+                    import *import = &PEEK_STACK (solver->import, eidx);
+                    int val_assigned = 0;
+                    bool applied = false;
 
-	  int x;
-	  int eidx;
-	  int sign;
-	  while(fscanf(file->file, "%d", &x)!=EOF) {
-		  //printf("x: %d\n",x);
-		  if(x < 0) {
-			  sign = -1;
-		    eidx = -x;
-		  }
-		  else {
-			  sign = 1;
-			  eidx = x;
-		  }
+                    // LÓGICA MODIFICADA (REBELDÍA)
+                    if (GET_OPTION(neural_backbone_modified)) {
+                        if(score >= neuralback_cfd) {
+                            target_phase_list[IDX (import->lit)] = -1;
+                            val_assigned = -1; applied = true;
+                            if(debug) printf("[DEBUG CSV] Var %d (Score %.4f) -> -1 (Confianza Alta)\n", eidx, score);
+                        } else if(score <= 1.0 - neuralback_cfd) {
+                            target_phase_list[IDX (import->lit)] = 1;
+                            val_assigned = 1; applied = true;
+                            if(debug) printf("[DEBUG CSV] Var %d (Score %.4f) -> 1 (Confianza Alta)\n", eidx, score);
+                        } else if (score >= 0.4 && score < 0.5) {
+                            target_phase_list[IDX (import->lit)] = -1; 
+                            val_assigned = -1; applied = true;
+                            if(debug) printf("[DEBUG CSV] Var %d (Score %.4f) -> -1 (REBELDÍA)\n", eidx, score);
+                        } else if (score >= 0.5 && score < 0.6) {
+                            target_phase_list[IDX (import->lit)] = 1;
+                            val_assigned = 1; applied = true;
+                            if(debug) printf("[DEBUG CSV] Var %d (Score %.4f) -> 1 (REBELDÍA)\n", eidx, score);
+                        } else {
+                            if(debug) printf("[DEBUG CSV] Var %d (Score %.4f) -> Ignorado (Zona Neutra)\n", eidx, score);
+                        }
+                    } else {
+                        // Lógica estándar
+                        if(score >= neuralback_cfd) {
+                            target_phase_list[IDX (import->lit)] = -1;
+                            val_assigned = -1; applied = true;
+                        } else if(score <= 1.0 - neuralback_cfd) {
+                            target_phase_list[IDX (import->lit)] = 1;
+                            val_assigned = 1; applied = true;
+                        }
+                    }
+                    if (applied) assignments_made++;
+                } else {
+                    if(debug) printf("[DEBUG ERROR] Var %d fuera de límites\n", eidx);
+                }
+            }
+            continue; 
+        }
 
-		  import *import = &PEEK_STACK (solver->import, eidx);
-		  neural_phase_list[IDX (import->lit)] = sign;
-	  }
-  }
- 
+        // --- CASO 2: FORMATO BACKBONE STANDARD (Ground Truth) ---
+        // Ejemplo: "b -10"
+        int eidx = 0;
+        int sign = 1;
+
+        if (*p == 'b' || *p == 'B') { 
+            p++; 
+            while (*p == ' ' || *p == '\t') p++; 
+        }
+
+        if (*p == '-') { sign = -1; p++; } 
+        else if (*p == '+') { p++; }
+
+        if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+            if ((size_t)eidx < SIZE_STACK(solver->import)) {
+                if (debug) printf("[DEBUG GT] Var %d -> Signo %d (Ground Truth - Sin Probabilidad)\n", eidx, sign);
+                
+                import *import = &PEEK_STACK (solver->import, eidx);
+                target_phase_list[IDX (import->lit)] = sign;
+                assignments_made++;
+            }
+        }
+    }
+    printf("[NEUROBACK DEBUG] Fin de lectura. Líneas: %d. Asignaciones: %d\n", lines_processed, assignments_made);
 }
 
-void
+
+ void
 kissat_parse_unsatord (kissat * solver, file * file) {
   
   unsigned eidx;

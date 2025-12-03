@@ -1,0 +1,1 @@
+python3 run_single.py ./sym_data/cnf/test/3_102_423.cnf --backbone ./sym_data/backbone/test/3_102_423.cnf.backbone

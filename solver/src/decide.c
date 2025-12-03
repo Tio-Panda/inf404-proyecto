@@ -1,3 +1,4 @@
+#include <stdio.h>
 #include "decide.h"
 #include "inlineframes.h"
 #include "inlineheap.h"
@@ -143,7 +144,7 @@ decide_phase (kissat * solver, unsigned idx)
   if(GET_OPTION (neural_backbone_always)) {
       value * neural = solver->phases.neural;
         if(!res && neural)
-           res = *(neural + idx);
+          res = *(neural + idx);
   }
 
   if (!res && target && (res = *target))
@@ -155,6 +156,7 @@ decide_phase (kissat * solver, unsigned idx)
   if (!res && saved && (res = *saved))
     {
       LOG ("%s uses saved decision phase %d", LOGVAR (idx), (int) res);
+
       INC (saved_decisions);
     }
 
@@ -162,7 +164,8 @@ decide_phase (kissat * solver, unsigned idx)
     {
       if(GET_OPTION (neural_backbone_initial) || GET_OPTION (random_phase_initial)) {
         value *initial = solver->phases.initial + idx;
-        res = *initial; 
+        res = *initial;
+    
       }
       else {        
         res = INITIAL_PHASE;

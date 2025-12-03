@@ -111,7 +111,7 @@ OPTION( vivifytier2, 6, 1, 100, "relative tier2 effort") \
 OPTION( walkeffort, 50, 0, 1e6, "effort in per mille") \
 OPTION( walkinitially, 0, 0, 1, "initial local search") \
 OPTION( warmup, 1, 0, 1, "initialize phases by unit propagation") \
-
+OPTION (neural_backbone_modified, 0, 0, 1,"use modified neural backbone strategy (inverted confidence margins)") \
 // *INDENT-OFF*
 
 #define TARGET_SAT 2

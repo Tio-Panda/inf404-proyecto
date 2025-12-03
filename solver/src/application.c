@@ -9,6 +9,8 @@
 #include "proof.h"
 #include "resources.h"
 #include "witness.h"
+#include <stdio.h>
+#include <stdlib.h>
 
 #include <inttypes.h>
 #include <string.h>
@@ -52,6 +54,7 @@ init_app (application * application, kissat * solver)
   application->conflicts = -1;
   application->decisions = -1;
   application->strict = NORMAL_PARSING;
+  application->neuroback_cfd = 0.9;  /* default confidence threshold */
 }
 
 static void
@@ -249,6 +252,19 @@ print_complete_usage (void)
 #endif
 #endif
   print_complete_dimacs_and_proof_usage ();
+}
+
+static void
+print_option (kissat * solver, int value, const opt * o)
+{
+  char buffer[96];
+  const bool b = (o->low == 0 && o->high == 1);
+  const char *val_str = FORMAT_VALUE (b, value);
+  const char *def_str = FORMAT_VALUE (b, o->value);
+  sprintf (buffer, "%s=%s", o->name, val_str);
+  kissat_message (solver, "--%-30s (%s default '%s')",
+		  buffer, (value == o->value ? "same as" : "different from"),
+		  def_str);
 }
 
 static bool
@@ -506,6 +522,8 @@ parse_options (application * application, int argc, char **argv)
   kissat_set_option (solver, "neural_backbone_initial", 1);
       else if (!strcmp (arg, "--neural_backbone_rephase"))
   kissat_set_option (solver, "neural_backbone_rephase", 1);
+    else if (!strcmp (arg, "--neural_backbone_modified"))
+  kissat_set_option (solver, "neural_backbone_modified", 1);
       else if (!strcmp (arg, "--neural_unsatord_focused"))
   kissat_set_option (solver, "neural_unsatord_focused", 1);
       else if (!strcmp (arg, "--neural_unsatord_stable"))
@@ -589,7 +607,7 @@ parse_options (application * application, int argc, char **argv)
 	  kissat_set_configuration (solver, arg + 2);
 	  configuration = arg;
 	}
-      else if (arg[0] == '-' && arg[1] == '-')
+      else if (arg[0] == '-' && arg[1] == '--')
 	{
 	  char name[kissat_options_max_name_buffer_size];
 	  int value;
@@ -608,7 +626,7 @@ parse_options (application * application, int argc, char **argv)
       else if (!strcmp (arg, "--default"))
 	;
 #endif
-      else if (arg[0] == '-' && arg[1] == '-')
+      else if (arg[0] == '-' && arg[1] == '--')
 	ERROR ("invalid long option '%s' "
 	       "(configured with '--no-options')", arg);
 #endif
@@ -753,12 +771,6 @@ parse_input (application * application)
   return true;
 }
 
-static void
-random_phase_initial (application * application) 
-{
-  random_phase_initial(application);
-}
-
 static bool
 parse_backbone (application * application)
 {
@@ -838,44 +850,6 @@ close_proof (application * application)
 
 #endif
 
-#ifndef QUIET
-
-#ifndef NOPTIONS
-static void
-print_option (kissat * solver, int value, const opt * o)
-{
-  char buffer[96];
-  const bool b = (o->low == 0 && o->high == 1);
-  const char *val_str = FORMAT_VALUE (b, value);
-  const char *def_str = FORMAT_VALUE (b, o->value);
-  sprintf (buffer, "%s=%s", o->name, val_str);
-  kissat_message (solver, "--%-30s (%s default '%s')",
-		  buffer, (value == o->value ? "same as" : "different from"),
-		  def_str);
-}
-#endif
-
-#ifndef NOPTIONS
-static void
-print_options (kissat * solver)
-{
-  const int verbosity = kissat_verbosity (solver);
-  if (verbosity < 0)
-    return;
-  size_t printed = 0;
-  for (all_options (o))
-    {
-      const int value = *kissat_options_ref (&solver->options, o);
-      if (o->value != value || verbosity > 0)
-	{
-	  if (!printed++)
-	    kissat_section (solver, "options");
-
-	  print_option (solver, value, o);
-	}
-    }
-}
-#endif
 
 static void
 print_limits (application * application)
@@ -914,7 +888,6 @@ print_limits (application * application)
     }
 }
 
-#endif
 
 static int
 run_application (kissat * solver,
@@ -957,11 +930,11 @@ run_application (kissat * solver,
       return 1;
 
     if(GET_OPTION(random_phase_initial)) {
-      random_phase_initial(&application);
+      kissat_random_phase_initial(application.solver);
     } 
 #ifndef QUIET
 #ifndef NOPTIONS
-  print_options (solver);
+  //print_option (solver);
 #endif
   print_limits (&application);
   kissat_section (solver, "solving");

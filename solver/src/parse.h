@@ -26,4 +26,6 @@ kissat_parse_unsatord (struct kissat * solver, file * file);
 void
 kissat_parse_backbone_to_initialphase (struct kissat * solver, file * file);
 
+void
+kissat_random_phase_initial(struct kissat * solver);
 #endif
