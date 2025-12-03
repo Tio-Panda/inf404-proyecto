@@ -424,31 +424,9 @@ parse_options (application * application, int argc, char **argv)
 	       arg, i == 1 ? "single" : "first");
       else if(!strncmp (arg, "--backbonefile=", 15)) {
         application->backbone_path = arg + 15;
-        //kissat_set_option (solver, "neural_backbone", 1);
-      }
-      else if (!strcmp (arg, "--neural_backbone_partial")) {
-        kissat_set_option (solver, "neural_backbone_partial", 1);
-      }
-      else if (!strncmp (arg, "--neural_backbone_partial_weight=", 32)) {
-        sscanf(arg + 32, "%lf", &application->neuroback_weight_param);
-        if (application->neuroback_weight_param < 0.0)
-          application->neuroback_weight_param = 0.0;
-        if (application->neuroback_weight_param > 1.0)
-          application->neuroback_weight_param = 1.0;
-        int percent = (int)(application->neuroback_weight_param * 100.0 + 0.5);
-        kissat_set_option (solver, "neural_backbone_partial_weight", percent);
-      }
-      else if (!strncmp (arg, "--lowscores_threshold=", 22)) {
-        double threshold_val;
-        sscanf(arg + 22, "%lf", &threshold_val);
-        if (threshold_val < 0.0) threshold_val = 0.0;
-        if (threshold_val > 1.0) threshold_val = 1.0;
-        int percent = (int)(threshold_val * 100.0 + 0.5);
-        kissat_set_option (solver, "lowscores_threshold", percent);
       }
       else if(!strncmp (arg, "--neuroback_cfd=", 16)) {
         sscanf(arg + 16, "%lf", &application->neuroback_cfd);
-        //printf("application->neuroback_cfd %lf\n", application->neuroback_cfd);
       }
       else if(!strncmp (arg, "--unsatord=", 11)) {
         application->unsatord_path = arg + 11;
@@ -526,9 +504,11 @@ parse_options (application * application, int argc, char **argv)
       else if (!strcmp (arg, "--neural_backbone_initial"))
   kissat_set_option (solver, "neural_backbone_initial", 1);
       else if (!strcmp (arg, "--neural_backbone_lowscores"))
-  kissat_set_option (solver, "neural_backbone_lowscores", 1);
+        solver->options.neural_backbone_lowscores = 1;
       else if (!strcmp (arg, "--neural_backbone_prioritize"))
-  kissat_set_option (solver, "neural_backbone_prioritize", 1);
+        solver->options.neural_backbone_prioritize = 1;
+      else if (!strcmp (arg, "--neural_backbone_partial"))
+    solver->options.neural_backbone_partial = 1;
       else if (!strcmp (arg, "--neural_backbone_rephase"))
   kissat_set_option (solver, "neural_backbone_rephase", 1);
       else if (!strcmp (arg, "--neural_unsatord_focused"))
@@ -1013,9 +993,11 @@ run_application (kissat * solver,
 				  application.max_var, application.partial);
 	}
     }
-#ifndef QUIET
-  kissat_print_statistics (solver);
-#endif
+  /* Print statistics when requested with -s, even if running in quiet mode
+   * (some scripts pass -q to suppress normal output). Keep printing also
+   * when not in quiet mode for backward compatibility. */
+  if (GET_OPTION (statistics) || !GET_OPTION (quiet))
+    kissat_print_statistics (solver);
 #ifndef NPROOFS
   close_proof (&application);
 #endif

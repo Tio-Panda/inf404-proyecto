@@ -91,6 +91,7 @@ parse_dimacs (kissat * solver, strictness strict,
 	      ch = NEXT ();
 	      if (ch != '-')
 		goto COMPLETE;
+		fprintf(stderr, "DEBUG: Prioritize mode active\n");
 
 	      char name[32];
 	      unsigned pos = 0;
@@ -133,7 +134,6 @@ parse_dimacs (kissat * solver, strictness strict,
 		    goto COMPLETE;
 		  arg *= 10;
 		  int digit = ch - '0';
-		  if (INT_MAX - digit < arg)
 		    goto COMPLETE;
 		  arg += digit;
 		}
@@ -165,7 +165,13 @@ parse_dimacs (kissat * solver, strictness strict,
 	  else
 #endif
 	    {
-	      while ((ch = NEXT ()) != '\n')
+              while ((ch = NEXT ()) != '\n')
+                if (ch == EOF)
+                  {
+                    if (strict != PEDANTIC_PARSING)
+                      break;
+                    return "unexpected end-of-file in header comment";
+                  }
 #if !defined(NOPTIONS) && defined(EMBEDDED)
 	      COMPLETE:
 #endif
@@ -428,12 +434,15 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 		for (all_phases (initial, p))
 			*p = initial_phase;
 
+		unsigned applied = 0;
+
 		char line[128];
 		while (fgets(line, sizeof line, file->file)) {
 			char *p = line;
 			while (*p == ' ' || *p == '\t') p++;
 			if (!*p || *p == '\n' || *p == '\r') continue;
 
+			// Try CSV format first (with confidence scores)
 			if (strchr(p, ',')) {
 				int eidx; double score;
 				if (sscanf(p, "%d , %lf", &eidx, &score) == 2) {
@@ -441,14 +450,17 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 						import *import = &PEEK_STACK (solver->import, eidx);
 						if(score >= neuralback_cfd) {
 							initial_phase_list[IDX (import->lit)] = -1;
+							applied++;
 						} else if(score <= 1.0 - neuralback_cfd) {
 							initial_phase_list[IDX (import->lit)] = 1;
+							applied++;
 						}
 					}
 				}
 				continue;
 			}
 
+			// Fall back to simple format (signed literals)
 			int eidx = 0, sign = 1;
 			if (*p == 'b' || *p == 'B') {
 				p++;
@@ -461,18 +473,21 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
 				if ((size_t)eidx < SIZE_STACK(solver->import)) {
 					import *import = &PEEK_STACK (solver->import, eidx);
-					initial_phase_list[IDX (import->lit)] = sign;
+						initial_phase_list[IDX (import->lit)] = sign;
+						applied++;
 				}
 			}
 		}
 	}
 
-	// New independent mode: prioritize by backbone probabilities for initial phases
 	if(GET_OPTION(neural_backbone_prioritize)) {
+		rewind(file->file);
 		value* initial_phase_list = solver->phases.initial;
 		const value initial_phase = INITIAL_PHASE;
 		for (all_phases (initial, p))
 			*p = initial_phase;
+
+		unsigned applied = 0;
 
 		char line[128];
 		while (fgets(line, sizeof line, file->file)) {
@@ -480,42 +495,44 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 			while (*p == ' ' || *p == '\t') p++;
 			if (!*p || *p == '\n' || *p == '\r') continue;
 
-			// Expect format: "<external_idx> , <score>" where score in [0.0, 1.0]
 			if (strchr(p, ',')) {
 				int eidx; double score;
-				if (sscanf(p, "%d , %lf", &eidx, &score) == 2) {
+			if (sscanf(p, "%d , %lf", &eidx, &score) == 2) {
 					if (eidx > 0 && (size_t)eidx < SIZE_STACK(solver->import)) {
 						import *import = &PEEK_STACK (solver->import, eidx);
-						// Deterministic thresholding using confidence parameter
 						if(score >= neuralback_cfd) {
 							initial_phase_list[IDX (import->lit)] = -1;
+							applied++;
 						} else if(score <= 1.0 - neuralback_cfd) {
 							initial_phase_list[IDX (import->lit)] = 1;
+							applied++;
 						}
 					}
 				}
 				continue;
 			}
 
-			// Also accept sign-only entries for compatibility
 			int eidx = 0, sign = 1;
 			if (*p == 'b' || *p == 'B') { p++; while (*p==' '||*p=='\t') p++; }
 			if (*p == '-' || *p == '+') { if (*p=='-') sign=-1; p++; }
-			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+		if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
 				if ((size_t)eidx < SIZE_STACK(solver->import)) {
 					import *import = &PEEK_STACK (solver->import, eidx);
 					initial_phase_list[IDX (import->lit)] = sign;
+					applied++;
 				}
 			}
 		}
 	}
 
 	if(GET_OPTION(neural_backbone_partial)) {
-		// Apply weighted backbone only to initial phases: probabilistically set initial phases.
+		rewind(file->file);
 		value* initial_phase_list = solver->phases.initial;
 		const value initial_phase = INITIAL_PHASE;
 		for (all_phases (initial, p))
 			*p = initial_phase;
+
+		unsigned applied = 0;
 
 		const double weight = GET_OPTION(neural_backbone_partial_weight) / 100.0;
 		char line[128];
@@ -531,46 +548,24 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 					const double rnd = kissat_pick_double(&solver->random);
 					if (rnd < weight) {
 						import *import = &PEEK_STACK (solver->import, eidx);
-						initial_phase_list[IDX (import->lit)] = sign;
+							initial_phase_list[IDX (import->lit)] = sign;
+							applied++;
 					}
 				}
 			}
 		}
 	}
 
-  /*if(GET_OPTION(neural_backbone_rephase)) {
-    value* neural_phase_list = solver->phases.neural;
-    //const value initial_phase = INITIAL_PHASE;
-    for (all_phases (neural, p))
-      *p = 0; //initial_phase;
-
-	  int x;
-	  int eidx;
-	  int sign;
-	  while(fscanf(file->file, "%d", &x)!=EOF) {
-		  //printf("x: %d\n",x);
-		  if(x < 0) {
-			  sign = -1;
-		    eidx = -x;
-		  }
-		  else {
-			  sign = 1;
-			  eidx = x;
-		  }
-
-		  import *import = &PEEK_STACK (solver->import, eidx);
-		  neural_phase_list[IDX (import->lit)] = sign;
-	  }
-
-  }*/
-  
 		if(GET_OPTION(neural_backbone_always) 
 		  || GET_OPTION(neural_backbone_rephase)
 		  || GET_OPTION(neural_backbone_lowscores)) {
 
+			rewind(file->file);
 			value* neural_phase_list = solver->phases.neural;
 			for (all_phases (neural, p))
 				*p = 0;
+
+		unsigned applied = 0;
 
 		char line[128];
 		while (fgets(line, sizeof line, file->file)) {
@@ -583,7 +578,8 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
 				if ((size_t)eidx < SIZE_STACK(solver->import)) {
 					import *import = &PEEK_STACK (solver->import, eidx);
-					neural_phase_list[IDX (import->lit)] = sign;
+						neural_phase_list[IDX (import->lit)] = sign;
+						applied++;
 				}
 			}
 		}
@@ -594,10 +590,7 @@ kissat_parse_unsatord (kissat * solver, file * file) {
   
   unsigned eidx;
 
-  //printf("parse neural_unsatord in stable parse.c&&&&&&&&\n");
   while(fscanf(file->file, "%u", &eidx)!=EOF) {
-		//num++;
-		//printf("eidx %u\n", eidx);
 		kissat_add_unsatord (solver, eidx);
 	}
 

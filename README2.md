@@ -70,18 +70,18 @@ Each CNF may produce **multiple graph components**, saved as:
 
 To use the solver, please compile the solver using the following commands:
 ```bash
-cd solver/build
-make
-cd ../..
+make -C solver/build
 ```
 After successful compilation, the solver binary will be available at `solver/build/kissat`.
 
-After compiling the solver, run the `solver_test.py` script which benchmarks three configurations of the Kissat SAT solver:
+After compiling the solver, run the `solver_test.py` script which benchmarks all configurations of the Kissat SAT solver whitout & with the extra heuristics:
 
-1. **NeuroBack mode** – runs Kissat using the neural backbone predictions.  
-2. **Default Kissat** – standard solver with no extra options.  
-3. **Randomized Kissat** – solver with random initialization and limited time.
-
+1. **NeuroBack initial** – runs Kissat using the neural backbone predictions for the initial phase.  
+2. **Neuroback Always** – runs kissat using the neural backbone predictions everytime its avalaible.
+3. **Default Kissat** – standard solver with no extra options.  
+4. **Partial Neuroback** – runs Kissat using a fraction of the neural backbone predictions for the initial phase.
+5. **LowScores Neuroback** – runs Kissat using the neural backbone predictions for the less actives variables avalaible when there's no actives enough variables.
+6.  
 ## What the script does
 - Reads CNF files from:  
   `./sym_data/cnf/test/`

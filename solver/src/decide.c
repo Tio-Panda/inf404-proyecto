@@ -4,6 +4,7 @@
 #include "inlinequeue.h"
 
 #include <inttypes.h>
+#include <float.h>
 
 static unsigned
 last_enqueued_unassigned_variable (kissat * solver, 
@@ -103,52 +104,50 @@ kissat_next_decision_variable (kissat * solver)
     else {
       res = largest_score_unassigned_variable (solver);
       
-      // LowScores mode: use backbone only for low-activity variables
       if (GET_OPTION(neural_backbone_lowscores)) {
         heap *scores = SCORES;
         const value *const values = solver->values;
         value *neural = solver->phases.neural;
-        
+        int neural_count = 0;
         if (neural) {
-          // Get max score for normalization
-          double max_score = kissat_max_score_on_heap(scores);
-          
-          if (max_score > 0) {
-            // Get score of VSIDS-selected variable
+          double total_score = 0.0;
+          unsigned count = 0;
+          {
+            unsigned *heap_stack = BEGIN_STACK (scores->stack);
+            const unsigned heap_size = SIZE_STACK (scores->stack);
+            for (unsigned i = 0; i < heap_size; ++i)
+              {
+                const unsigned v = heap_stack[i];
+                const double s = kissat_get_heap_score (scores, v);
+                total_score += s;
+                count++;
+              }
+          }
+          if (count > 0 && total_score > 0) {
+            double avg_score = total_score / count;
             double res_score = kissat_get_heap_score(scores, res);
-            double norm_activity = res_score / max_score;
-            
-            // Get threshold as percentage (0-100)
-            double threshold = GET_OPTION(lowscores_threshold) / 100.0;
-            
-            // If activity is below threshold, try to find a variable with backbone suggestion
-            if (norm_activity < threshold) {
-              // Try to find an unassigned variable with backbone suggestion and low score
+            double norm_activity = res_score / avg_score;
+            double threshold_ratio = GET_OPTION(lowscores_threshold) / 100.0;
+            if (norm_activity < threshold_ratio) {
               bool found = false;
+              unsigned best_idx = 0;
+              double best_score = DBL_MAX;
               for (all_variables(idx)) {
                 if (!ACTIVE(idx)) continue;
                 if (VALUE(LIT(idx))) continue;
-                
-                // Check if this variable has a backbone suggestion
-                value backbone_phase = neural[idx];
-                if (backbone_phase != 0) {
-                  // This variable has a backbone suggestion
-                  double idx_score = kissat_get_heap_score(scores, idx);
-                  double idx_norm_activity = idx_score / max_score;
-                  
-                  // Use this variable if its activity is also below threshold
-                  if (idx_norm_activity < threshold) {
-                    res = idx;
-                    found = true;
-                    LOG ("lowscores mode: selected %s with backbone (activity %.3f < %.3f)", 
-                         LOGVAR(res), idx_norm_activity, threshold);
-                    break;
-                  }
+                if (!neural) continue;
+                  if (neural[idx] == 0) continue;
+                double idx_score = kissat_get_heap_score(scores, idx);
+                if (idx_score < best_score) {
+                  best_score = idx_score;
+                  best_idx = idx;
+                  found = true;
                 }
               }
-              
-              if (!found) {
-                LOG ("lowscores mode: no low-activity variable with backbone found, using VSIDS");
+              if (found) {
+                res = best_idx;
+                LOG ("lowscores mode: replaced VSIDS by backbone-min-score %s (score %g, threshold_ratio %.3f)",
+                     LOGVAR(res), best_score, threshold_ratio);
               }
             }
           }
@@ -214,7 +213,7 @@ decide_phase (kissat * solver, unsigned idx)
 
   if (!res)
     {
-      if(GET_OPTION (neural_backbone_initial) || GET_OPTION (random_phase_initial)) {
+      if(GET_OPTION (neural_backbone_initial) || GET_OPTION (random_phase_initial) || GET_OPTION(neural_backbone_partial) || GET_OPTION(neural_backbone_prioritize)) {
         value *initial = solver->phases.initial + idx;
         res = *initial; 
       }
