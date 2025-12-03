@@ -6,6 +6,7 @@ data/
 models/
 results/
 prediction/
+prediction_mamba/
 log/
 solver/makefile
 solver/src/makefile
