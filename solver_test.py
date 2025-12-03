@@ -1,10 +1,17 @@
+import csv
 import subprocess
 from pathlib import Path
 import shutil
 import time
 
+
+# =====================
+MODEL_NAME = "NeuroBack"   # Cambia aquí: "NeuroBack", "inf404", etc.
+MODEL_TAG = MODEL_NAME.lower()
+
 CNF_DIR = Path("./sym_data/cnf/test/")
 BACKBONE_DIR = Path("./sym_data/backbone/test")
+#BACKBONE_DIR = Path("./prediction/cpu/cmb_predictions")
 SOLVER_BINARY = Path("./solver/build/kissat")
 RESULTS_DIR = Path("./results")
 
@@ -16,105 +23,144 @@ def decompress_file(xz_file: Path, dest_dir: Path) -> Path:
     temp_xz = dest_dir / xz_file.name
     if not decompressed_file.exists():
         shutil.copy(xz_file, temp_xz)
-        print(f"Decompressing {xz_file.name} into {decompressed_file}...")
         subprocess.run(["xz", "-dkf", str(temp_xz)], check=True)
     return decompressed_file
 
 
+def parse_dimacs_header(cnf_path: Path) -> tuple[int, int]:
+    with open(cnf_path, "r") as f:
+        for line in f:
+            if line.startswith("p cnf"):
+                _, _, v, c = line.strip().split()
+                return int(v), int(c)
+    return -1, -1
+
+
 def run_solver(cnf_file: Path, extra_args: list[str]) -> tuple[str, float]:
-    """Run solver with optional extra arguments and return (result, elapsed_time)"""
-
     cmd = [str(SOLVER_BINARY.resolve()), str(cnf_file.resolve()), "-q", "-n"] + extra_args
-
-    start_time = time.time()
+    start = time.time()
 
     try:
-        result = subprocess.run(
-            cmd,
-            text=True,
-            capture_output=True,
-            timeout=5
-        )
+        result = subprocess.run(cmd, text=True, capture_output=True, timeout=5)
     except subprocess.TimeoutExpired:
-        return "TIMEOUT", time.time() - start_time
+        return "TIMEOUT", time.time() - start
 
-    elapsed = time.time() - start_time
-
-    if result.stderr:
-        print("stderr:", result.stderr.strip())
-
+    elapsed = time.time() - start
     stdout = result.stdout.strip() if result.stdout else "NO_OUTPUT"
     return stdout, elapsed
 
 
+def compute_summary(rows, title):
+    total = len(rows)
+    sat = sum(1 for r in rows if "SAT" in r["result"])
+    unsat = sum(1 for r in rows if "UNSAT" in r["result"])
+    errors = sum(1 for r in rows if r["result"] in ["TIMEOUT", "NO_BACKBONE", "NO_OUTPUT"])
+    total_time = sum(r["solving_time_sec"] for r in rows)
+    avg_time = total_time / total if total > 0 else 0.0
+
+    print(f"--- AGGREGATE METRICS ({title}) ---")
+    print(f"Total problems: {total}")
+    print(f"SAT: {sat}")
+    print(f"UNSAT: {unsat}")
+    print(f"Errors: {errors}")
+    print(f"Total solving time: {total_time:.2f}s")
+    print(f"Average per problem: {avg_time:.2f}s")
+    print()
+
+
 def main():
     cnf_files = sorted(CNF_DIR.glob("*.cnf.xz"))
-    summary = {"NeuroBack": [], "Default": [], "Random": []}
+
+    model_rows = []
+    default_rows = []
+
+    print(f"\n=== Ejecutando benchmark para modelo: {MODEL_NAME} ===\n")
 
     for cnf_file in cnf_files:
-        print(f"\n=== Processing {cnf_file.name} ===")
+        print(f"\n→ Instancia: {cnf_file.name}")
 
-        # NeuroBack
-        print("Running NeuroBack...")
-        backbone_xz = BACKBONE_DIR / f"{cnf_file.stem}.backbone.xz"
-        print(backbone_xz)
-        if backbone_xz.exists():
-            cnf_result_dir = RESULTS_DIR / cnf_file.stem
-            cnf_result_dir.mkdir(exist_ok=True)
+        cnf_result_dir = RESULTS_DIR / cnf_file.stem
+        cnf_result_dir.mkdir(exist_ok=True)
 
-            backbone_file = decompress_file(backbone_xz, cnf_result_dir)
+        cnf_uncompressed = decompress_file(cnf_file, cnf_result_dir)
+        n_vars, n_clauses = parse_dimacs_header(cnf_uncompressed)
 
-            nb_out, nb_time = run_solver(cnf_file, [
-                "--stable=2",
-                "--neural_backbone_initial",
-                "--neuroback_cfd=0.9",
-                str(backbone_file.resolve())
-            ])
-            summary["NeuroBack"].append((cnf_file.name, nb_out, nb_time))
-        # else:
-        #     summary["NeuroBack"].append((cnf_file.name, "NO_BACKBONE", 0.0))
+        # ============  MODEL MODE ============
+        backbone_candidates = list(BACKBONE_DIR.glob(f"{cnf_file.stem}.c-*.res.tar.gz"))
 
-        # Default-Kissat
-        # print("Running Default-Kissat...")
-        # def_out, def_time = run_solver(cnf_file, [])
-        # summary["Default"].append((cnf_file.name, def_out, def_time))
+        if backbone_candidates:
+            backbone_tar = backbone_candidates[0]
 
-        # Random-Kissats
-        # print("Running Random-Kissat...")
-        # rand_out, rand_time = run_solver(cnf_file, [
-        #     "--seed=42",
-        #     "--random_phase_initial=true",
-        #     "--tumble=true",
-        #     "--stable=0",
-        #     "--time=5"
-        # ])
-        # summary["Random"].append((cnf_file.name, rand_out, rand_time))
+            print(f"  [{MODEL_NAME}] Descomprimiendo backbone: {backbone_tar.name}", end=" ")
 
-    # --- PRINT SUMMARY ---
-    for config in ["NeuroBack", "Default", "Random"]:
-        print(f"\n===== RESULTS FOR {config} =====")
-        total_time = 0
-        sat_count = unsat_count = error_count = no_backbone = 0
+            # Unpack backbone
+            shutil.unpack_archive(backbone_tar, cnf_result_dir)
 
-        for cnf_name, result, t in summary[config]:
-            total_time += t
+            # Search for .res or .pred files
+            extracted = list(cnf_result_dir.glob("*.res")) + list(cnf_result_dir.glob("*.pred"))
 
-            if result.startswith("SATISFIABLE"):
-                sat_count += 1
-            elif result.startswith("UNSATISFIABLE"):
-                unsat_count += 1
-            elif result == "NO_BACKBONE":
-                no_backbone += 1
-            elif result in ("TIMEOUT", "NO_OUTPUT"):
-                error_count += 1
+            if extracted:
+                backbone_file = extracted[0]
+                has_backbone = True
+                print("OK")
+            else:
+                model_out = "NO_BACKBONE"
+                model_time = 0.0
+                inference_time = 0.0
+                has_backbone = False
+                print("ERROR: no se encontró archivo .res dentro del tar")
+        else:
+            model_out = "NO_BACKBONE"
+            model_time = 0.0
+            inference_time = 0.0
+            has_backbone = False
 
-        print(f"\n--- METRICS ({config}) ---")
-        print(f"Total problems: {len(cnf_files)}")
-        print(f"SAT: {sat_count}")
-        print(f"UNSAT: {unsat_count}")
-        print(f"Errors: {error_count}")
-        print(f"Total solving time: {total_time:.2f}s")
-        print(f"Average per problem: {total_time / len(cnf_files):.2f}s")
+
+        print(f"OK → {model_out} ({model_time:.3f}s)")
+
+        model_rows.append({
+            "cnf_name": cnf_file.name,
+            "solver": MODEL_NAME,
+            "result": model_out,
+            "solving_time_sec": model_time,
+            "inference_time_sec": inference_time,
+            "has_backbone": has_backbone,
+            "n_vars": n_vars,
+            "n_clauses": n_clauses
+        })
+
+        # ============ DEFAULT KISSAT ============
+        print("  [Default] Ejecutando...", end=" ")
+        def_out, def_time = run_solver(cnf_uncompressed, [])
+        print(f"OK → {def_out} ({def_time:.3f}s)")
+
+        default_rows.append({
+            "cnf_name": cnf_file.name,
+            "solver": "Default",
+            "result": def_out,
+            "solving_time_sec": def_time,
+            "inference_time_sec": "",
+            "has_backbone": "",
+            "n_vars": n_vars,
+            "n_clauses": n_clauses
+        })
+
+    # ============ SAVE CSV ============
+    with open(f"results_{MODEL_TAG}.csv", "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=model_rows[0].keys())
+        writer.writeheader()
+        writer.writerows(model_rows)
+
+    with open("results_default.csv", "w", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=default_rows[0].keys())
+        writer.writeheader()
+        writer.writerows(default_rows)
+
+    # ============ FINAL SUMMARY ============
+    print("\n\n=== FINAL SUMMARY ===\n")
+    compute_summary(model_rows, MODEL_NAME)
+    compute_summary(default_rows, "Default")
+
 
 if __name__ == "__main__":
     main()
