@@ -5,12 +5,14 @@ import shutil
 import time
 
 # =====================
-MODEL_NAME = "NeuroBack"   # Cambia aquí: "NeuroBack", "inf404", etc.
+# MODEL_NAME = "NeuroBack"
+MODEL_NAME = "mamba"
 MODEL_TAG = MODEL_NAME.lower()
 
 CNF_DIR = Path("./sym_data/cnf/test/")
 #BACKBONE_DIR = Path("./sym_data/backbones/test/")
-BACKBONE_DIR = Path("./prediction/cpu/cmb_predictions/")
+# BACKBONE_DIR = Path("./prediction/cpu/cmb_predictions/")
+BACKBONE_DIR = Path("./prediction_mamba/cpu/cmb_predictions/")
 SOLVER_BINARY = Path("./solver/build/kissat")
 RESULTS_DIR = Path("./results")
 

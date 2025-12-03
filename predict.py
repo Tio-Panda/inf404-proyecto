@@ -46,7 +46,8 @@ def predict_single(pt_dir_path, pt_file, model_path, res_dir_path, is_cuda=True)
 
     with torch.no_grad():
         if MODEL == "mamba":
-            pred = mymodel(data.x, data.edge_index, data.edge_attr, batch)
+            logits = mymodel(data.x, data.edge_index, data.edge_attr, batch)
+            pred = torch.sigmoid(logits)
         else:
             pred = mymodel(data.x, data.edge_index, data.edge_attr)
 
