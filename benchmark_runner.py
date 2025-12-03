@@ -53,14 +53,19 @@ def decompress_if_needed(file_path: Path) -> Path:
     return file_path
 
 def run_solver(cnf_file: Path, extra_args: list[str], timeout: int = 10) -> tuple[str, float]:
-    # Construir comando
+    # Construir comando base mínimo: solver + cnf + quiet + no-proof
     cmd = [str(SOLVER_PATH.resolve()), str(cnf_file.resolve()), "-q", "-n"] + extra_args
     
+    # Imprimir el comando exacto para depuración
+    # print(f"DEBUG EXEC: {' '.join(cmd)}")
+
     start = time.time()
     try:
         # Ejecutar solver
+        # IMPORTANTE: Capturamos stderr para ver por qué falla si falla
         r = subprocess.run(cmd, text=True, capture_output=True, timeout=timeout)
         out = r.stdout.strip() if r.stdout else ""
+        err = r.stderr.strip() if r.stderr else ""
         
         # Parsear resultado rápido
         if "SATISFIABLE" in out and "UNSATISFIABLE" not in out:
@@ -68,7 +73,12 @@ def run_solver(cnf_file: Path, extra_args: list[str], timeout: int = 10) -> tupl
         elif "UNSATISFIABLE" in out:
             res_str = "UNSATISFIABLE"
         else:
-            res_str = "UNKNOWN/ERR"
+            # Si hay error en stderr, lo mostramos
+            if err:
+                # Solo mostramos la primera línea del error para no ensuciar la salida
+                res_str = f"ERROR: {err.splitlines()[0]}"
+            else:
+                res_str = f"UNKNOWN (Code {r.returncode})"
             
     except subprocess.TimeoutExpired:
         return "TIMEOUT", time.time() - start
@@ -124,8 +134,7 @@ def main():
         res, t = run_solver(final_cnf, [
             f"--backbonefile={final_backbone.resolve()}",
             "--neural_backbone_initial",
-            f"--neuroback_cfd={args.cfd}",
-            "--stable=2"
+            f"--neuroback_cfd={args.cfd}"
         ], timeout=args.timeout)
         results.append(f"1. NeuroBack Normal       : {res:15s} ({t:.4f}s)")
     else:
@@ -137,8 +146,7 @@ def main():
             f"--backbonefile={final_backbone.resolve()}",
             "--neural_backbone_initial",
             "--neural_backbone_modified",  # <--- Activa tu lógica rebelde
-            f"--neuroback_cfd={args.cfd}",
-            "--stable=2"
+            f"--neuroback_cfd={args.cfd}"
         ], timeout=args.timeout)
         results.append(f"2. NeuroBack Modificada   : {res:15s} ({t:.4f}s)")
     else:
@@ -151,7 +159,6 @@ def main():
     # --- EJECUCIÓN 4: Random Phase ---
     res, t = run_solver(final_cnf, [
         "--random_phase_initial",
-        "--stable=0"
     ], timeout=args.timeout)
     results.append(f"4. Random Phase           : {res:15s} ({t:.4f}s)")
 
