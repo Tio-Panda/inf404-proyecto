@@ -85,7 +85,7 @@ Lo que inducia en un peor desempeño.
 
 - Initial backbone
     - Utilización de la red solo para el signo inicial
-- Heurística estocástica.
+- Always backbone.
     - Priorización del uso de la red para todas las decisiones
 - Admiten como posible variable de backbone si la confianza es alta
 - Por cada una, se elige variable, se asigna fase, y se propaga
