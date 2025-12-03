@@ -208,6 +208,8 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
     - Partial-backbone
     - Prioritized-backbone
     - LowScores-backbone
+    - Incertidumbre Invertida
+    - Neuronal Target
 
 ---
 
@@ -215,7 +217,7 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 
 - Initial backbone
     - Utilización de la red solo para el signo inicial.
-- Añways backbone
+- Always backbone
     - Priorización del uso de la red para todas las decisiones.
 - Admiten como posible variable de backbone si la confianza es alta.
 - Por cada una, se elige variable, se asigna fase, y se propaga.
@@ -246,6 +248,32 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
     - Variables de baja actividad: VSIDS es menos informativo → aquí las predicciones de la GNN pueden aportar valor.
 
 ---
+
+# Heurísticas: Estrategia de Rebeldía (Incertidumbre Invertida)
+- Cuando la red neuronal muestra "incertidumbre".
+    - **Zona de confianza alta (>0.9):** asignamos *True*
+    - **Zona de confianza baja (<0.1):** asignamos *False*
+    - **Zona de incertidumbre:**
+        - Si la red predice probabilidad (ligeramente True), el solver lo asigna False (-1)
+        - Si la red predice probabilidad (ligeramente False), el solver lo asigna False (1)
+- **En predicciones probabilisticas reales:**
+- **En Ground Truth (archivos binarios):**
+---
+
+# Heurísticas: Neuronal Target
+- **Kissat:** utiliza *Target Phase* para estabilizar la búsqueda cuando entra a modo estable. Se calcula matemáticamente basandose en el historial
+- **Nuestra Estrategia:** Se modifica la función decide_phase para consultar la memoria neuronal antes de recurrir al target calculado.
+    - Resilencia: Permite que el software se "recupere"
+    - Sinergia: combina lo mejor de dos mundos: exploración local rápida + guía global inteligente
+    - Resultados: En pruebas con Ground Truth, esta estrategia ha demostrado reducir
+
+---
+
+# Resultados
+
+![width:700px](IMG-20251203-WA0023.jpg)
+
+---
 # Resultados
 ![width:700px](Resultado_NeuroBack_cactus_plot.png)
 
@@ -267,7 +295,9 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
     - Menor tiempo de ejecución, y menos restarts.
 - Las heurísticas implemtentadas tienen en general peor rendimiento que NeuroBack-Initial pero mejor que kissat-default.
 - Partial y prioritized destacan del resto.
+
 ---
+
 # Discusión y conclusiones
 ---
 
