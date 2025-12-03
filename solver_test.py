@@ -3,6 +3,7 @@ from pathlib import Path
 import shutil
 import time
 import re
+import csv
 
 CNF_DIR = Path("./sym_data/cnf/test")
 BACKBONE_DIR = Path("./sym_data/backbone/test")
@@ -10,11 +11,19 @@ SOLVER_BINARY = Path("./solver/build/kissat")
 RESULTS_DIR = Path("./results")
 
 RESULTS_DIR.mkdir(exist_ok=True)
-
 COMP_EXTS = [".xz", ".bz2", ".gz", ".lzma"]
+
+# Porcentaje de instancias a tomar (0 < TAKE_FRACTION <= 1.0)
 TAKE_FRACTION: float = 1.
 
 
+# -----------------------------
+# Variable global para el modelo
+# falta implementar como elegir los backbones dependiendo del modelo
+
+Modelo = "NeuroBack" 
+# Modelo = "Mamba"
+# -----------------------------
 
 def is_cnf_like(name: str) -> bool:
     lname = name.lower()
@@ -65,7 +74,7 @@ def run_solver(cnf_file: Path, extra_args: list[str]) -> tuple[str, float]:
             cmd,
             text=True,
             capture_output=True,
-            timeout=10  # timeout x instancia
+            timeout=15  # timeout x instancia
         )
     except subprocess.TimeoutExpired:
         return "TIMEOUT", time.time() - start_time
@@ -93,6 +102,70 @@ def parse_stats_from_stdout(s: str):
             if name in stats:
                 stats[name] = val
     return stats
+
+
+def export_results_to_csv(summary: dict, output_file: Path = Path(f"Resultados/{Modelo}.csv")):
+    """Export summary results to CSV format for cactus plots and comparisons.
+    
+    Creates a CSV with columns:
+    - method: solver configuration name
+    - result: SAT/UNSAT/TIMEOUT/ERROR
+    - time: solving time in seconds
+    - conflicts: number of conflicts
+    - decisions: number of decisions
+    - propagations: number of propagations
+    - restarts: number of restarts
+    
+    Args:
+        summary: Dictionary with method names as keys and list of results as values
+        output_file: Path to the output CSV file
+    """
+    
+    rows = []
+    
+    for method, results in summary.items():
+        n=1
+        for entry in results:
+            _, result_text, solve_time, stats = entry
+            
+            # Determine result status
+            if result_text == "NO_BACKBONE":
+                status = "NO_BACKBONE"
+            elif result_text == "TIMEOUT":
+                status = "TIMEOUT"
+            elif result_text == "NO_OUTPUT":
+                status = "ERROR"
+            elif "UNSATISFIABLE" in result_text:
+                status = "UNSAT"
+            elif "SATISFIABLE" in result_text:
+                status = "SAT"
+            else:
+                status = "UNKNOWN"
+            
+            row = {
+                "n":n,
+                "method": method,
+                "result": status,
+                "time": f"{solve_time:.4f}",
+                "conflicts": stats.get("conflicts", 0),
+                "decisions": stats.get("decisions", 0),
+                "propagations": stats.get("propagations", 0),
+                "restarts": stats.get("restarts", 0),
+            }
+            rows.append(row)
+            n+=1
+    # Write to CSV
+    with open(output_file, 'w', newline='') as csvfile:
+        fieldnames = ["n", "method", "result", "time", "conflicts", 
+                      "decisions", "propagations", "restarts"]
+        writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+        
+        writer.writeheader()
+        for row in rows:
+            writer.writerow(row)
+    
+    print(f"\nResults exported to {output_file}")
+
 
 def main():
     # Gather CNF-like files (compressed allowed)
@@ -280,6 +353,9 @@ def main():
         print(f"  Decisions: {sum_decisions / n:.2f}")
         print(f"  Propagations: {sum_propagations / n:.2f}")
         print(f"  Restarts: {sum_restarts / n:.2f}")
+
+    # Export results to CSV
+    export_results_to_csv(summary)
 
 if __name__ == "__main__":
     main()
