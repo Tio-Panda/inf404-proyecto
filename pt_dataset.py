@@ -371,21 +371,19 @@ if __name__ == '__main__':
     VAL_DIR.mkdir(parents=True, exist_ok=True)
     TEST_DIR.mkdir(parents=True, exist_ok=True)
 
-    s1 = (Path("./sym_data/cnf/pretrain/"), "./pretrain_scan.csv")
-    s2 = (Path("./sym_data/cnf/validation/"), "./validation_scan.csv")
+    # s1 = (Path("./sym_data/cnf/pretrain/"), "./pretrain_scan.csv")
+    # s2 = (Path("./sym_data/cnf/validation/"), "./validation_scan.csv")
     s3 = (Path("./sym_data/cnf/test/"), "./test_scan.csv")
     # s4 = (Path("./data/cnf/finetune/"), "./finetune_scan.txt")
 
-    # s0 = s1
-    # scan_dataset(s0[0], 12, s0[1])
-
-    scans = [(TRAIN_DIR, s1), (VAL_DIR, s2), (TEST_DIR, s3)]
+    # scans = [(TRAIN_DIR, s1), (VAL_DIR, s2), (TEST_DIR, s3)]
+    scans = [(TEST_DIR, s3)]
     for source_path, scan in scans:
         save_dataset(scan[0], source_path, 14, scan[1])
-    
-    import pandas as pd
-    df = pd.read_csv("./pretrain_scan.csv")
-    count = df["n_data_list"].value_counts()
-    print(count)
+
+    # import pandas as pd
+    # df = pd.read_csv("./pretrain_scan.csv")
+    # count = df["n_data_list"].value_counts()
+    # print(count)
 
     

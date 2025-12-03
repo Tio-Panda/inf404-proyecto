@@ -15,7 +15,7 @@ MODEL = "mamba"
 # MODEL = "neuroback"
 
 def predict_single(pt_dir_path, pt_file, model_path, res_dir_path, is_cuda=True):
-    data = torch.load(os.path.join(pt_dir_path, pt_file))
+    data = torch.load(os.path.join(pt_dir_path, pt_file), weights_only=False)
 
     if (MODEL == "mamba"):
         mymodel = NeuroBackMamba(
@@ -42,8 +42,13 @@ def predict_single(pt_dir_path, pt_file, model_path, res_dir_path, is_cuda=True)
 
     mymodel.eval()
 
+    batch = torch.zeros(data.x.size(0), dtype=torch.long, device=data.x.device)
+
     with torch.no_grad():
-        pred = mymodel(data.x, data.edge_index, data.edge_attr)
+        if MODEL == "mamba":
+            pred = mymodel(data.x, data.edge_index, data.edge_attr, batch)
+        else:
+            pred = mymodel(data.x, data.edge_index, data.edge_attr)
 
         n2v = data.n2v.cpu().numpy().tolist()
 

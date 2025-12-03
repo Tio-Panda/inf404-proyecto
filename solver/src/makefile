@@ -1,1 +1,1 @@
-/home/huyang/Desktop/neuroback/solver/makefile
+/home/panda/code/usm/lca/inf404-proyecto/solver/makefile

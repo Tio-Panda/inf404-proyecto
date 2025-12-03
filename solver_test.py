@@ -3,7 +3,7 @@ from pathlib import Path
 import shutil
 import time
 
-CNF_DIR = Path("./sym_data/cnf/test")
+CNF_DIR = Path("./sym_data/cnf/test/")
 BACKBONE_DIR = Path("./sym_data/backbone/test")
 SOLVER_BINARY = Path("./solver/build/kissat")
 RESULTS_DIR = Path("./results")
@@ -48,7 +48,7 @@ def run_solver(cnf_file: Path, extra_args: list[str]) -> tuple[str, float]:
 
 
 def main():
-    cnf_files = sorted(CNF_DIR.glob("*.cnf"))
+    cnf_files = sorted(CNF_DIR.glob("*.cnf.xz"))
     summary = {"NeuroBack": [], "Default": [], "Random": []}
 
     for cnf_file in cnf_files:
@@ -56,7 +56,8 @@ def main():
 
         # NeuroBack
         print("Running NeuroBack...")
-        backbone_xz = BACKBONE_DIR / f"{cnf_file.stem}.cnf.backbone.xz"
+        backbone_xz = BACKBONE_DIR / f"{cnf_file.stem}.backbone.xz"
+        print(backbone_xz)
         if backbone_xz.exists():
             cnf_result_dir = RESULTS_DIR / cnf_file.stem
             cnf_result_dir.mkdir(exist_ok=True)
@@ -70,24 +71,24 @@ def main():
                 str(backbone_file.resolve())
             ])
             summary["NeuroBack"].append((cnf_file.name, nb_out, nb_time))
-        else:
-            summary["NeuroBack"].append((cnf_file.name, "NO_BACKBONE", 0.0))
+        # else:
+        #     summary["NeuroBack"].append((cnf_file.name, "NO_BACKBONE", 0.0))
 
         # Default-Kissat
-        print("Running Default-Kissat...")
-        def_out, def_time = run_solver(cnf_file, [])
-        summary["Default"].append((cnf_file.name, def_out, def_time))
+        # print("Running Default-Kissat...")
+        # def_out, def_time = run_solver(cnf_file, [])
+        # summary["Default"].append((cnf_file.name, def_out, def_time))
 
         # Random-Kissats
-        print("Running Random-Kissat...")
-        rand_out, rand_time = run_solver(cnf_file, [
-            "--seed=42",
-            "--random_phase_initial=true",
-            "--tumble=true",
-            "--stable=0",
-            "--time=5"
-        ])
-        summary["Random"].append((cnf_file.name, rand_out, rand_time))
+        # print("Running Random-Kissat...")
+        # rand_out, rand_time = run_solver(cnf_file, [
+        #     "--seed=42",
+        #     "--random_phase_initial=true",
+        #     "--tumble=true",
+        #     "--stable=0",
+        #     "--time=5"
+        # ])
+        # summary["Random"].append((cnf_file.name, rand_out, rand_time))
 
     # --- PRINT SUMMARY ---
     for config in ["NeuroBack", "Default", "Random"]:
