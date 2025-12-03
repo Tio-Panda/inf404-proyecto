@@ -421,7 +421,10 @@ void kissat_random_phase_initial(kissat * solver) {
 void kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
     
     // Si ninguna opción relevante está activa, salimos
-    if (!GET_OPTION(neural_backbone_initial) && !GET_OPTION(neural_backbone_always) && !GET_OPTION(neural_backbone_rephase)) {
+    if (!GET_OPTION(neural_backbone_initial) && 
+        !GET_OPTION(neural_backbone_always) && 
+        !GET_OPTION(neural_backbone_rephase) &&
+        !GET_OPTION(neural_backbone_target)) { // <--- MODIFICADO: Añadido target
         return;
     }
 
@@ -436,7 +439,8 @@ void kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd)
         const value init_val = INITIAL_PHASE;
         for (all_phases (initial, p)) *p = init_val;
     } else {
-        printf("[NEUROBACK DEBUG] Modo: ALWAYS/NEURAL\n");
+        // Entra aquí si es ALWAYS, REPHASE o TARGET
+        printf("[NEUROBACK DEBUG] Modo: ALWAYS/NEURAL/TARGET\n");
         target_phase_list = solver->phases.neural;
         for (all_phases (neural, p)) *p = 0;
     }
@@ -538,7 +542,7 @@ void kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd)
 }
 
 
- void
+void
 kissat_parse_unsatord (kissat * solver, file * file) {
   
   unsigned eidx;
@@ -551,4 +555,3 @@ kissat_parse_unsatord (kissat * solver, file * file) {
 	}
 
 }
-

@@ -524,6 +524,8 @@ parse_options (application * application, int argc, char **argv)
   kissat_set_option (solver, "neural_backbone_rephase", 1);
     else if (!strcmp (arg, "--neural_backbone_modified"))
   kissat_set_option (solver, "neural_backbone_modified", 1);
+    else if (!strcmp (arg, "--neural_backbone_target"))
+  kissat_set_option (solver, "neural_backbone_target", 1);
       else if (!strcmp (arg, "--neural_unsatord_focused"))
   kissat_set_option (solver, "neural_unsatord_focused", 1);
       else if (!strcmp (arg, "--neural_unsatord_stable"))
@@ -607,7 +609,7 @@ parse_options (application * application, int argc, char **argv)
 	  kissat_set_configuration (solver, arg + 2);
 	  configuration = arg;
 	}
-      else if (arg[0] == '-' && arg[1] == '--')
+      else if (arg[0] == '-' && arg[1] == '-')
 	{
 	  char name[kissat_options_max_name_buffer_size];
 	  int value;
@@ -626,7 +628,7 @@ parse_options (application * application, int argc, char **argv)
       else if (!strcmp (arg, "--default"))
 	;
 #endif
-      else if (arg[0] == '-' && arg[1] == '--')
+      else if (arg[0] == '-' && arg[1] == '-')
 	ERROR ("invalid long option '%s' "
 	       "(configured with '--no-options')", arg);
 #endif

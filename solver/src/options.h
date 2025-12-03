@@ -112,6 +112,7 @@ OPTION( walkeffort, 50, 0, 1e6, "effort in per mille") \
 OPTION( walkinitially, 0, 0, 1, "initial local search") \
 OPTION( warmup, 1, 0, 1, "initialize phases by unit propagation") \
 OPTION (neural_backbone_modified, 0, 0, 1,"use modified neural backbone strategy (inverted confidence margins)") \
+OPTION( neural_backbone_target, 0, 0, 1, "use neural backbone as target phase in stable mode") \
 // *INDENT-OFF*
 
 #define TARGET_SAT 2

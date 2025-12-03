@@ -17,10 +17,10 @@ last_enqueued_unassigned_variable (kissat * solver,
   if (values[LIT (res)])
     {
       do
-	{
-	  res = links[res].prev;
-	  assert (!DISCONNECTED (res));
-	}
+  {
+    res = links[res].prev;
+    assert (!DISCONNECTED (res));
+  }
       while (values[LIT (res)]);
       kissat_update_queue (links, queue, res);
     }
@@ -54,9 +54,9 @@ largest_score_unassigned_variable (kissat * solver)
   for (all_variables (idx))
     {
       if (!ACTIVE (idx))
-	continue;
+  continue;
       if (VALUE (LIT (idx)))
-	continue;
+  continue;
       const double idx_score = kissat_get_heap_score (scores, idx);
       assert (score >= idx_score);
     }
@@ -126,8 +126,20 @@ decide_phase (kissat * solver, unsigned idx)
     target = 0;
   else if (!GET_OPTION (target))
     target = 0;
-  else if (solver->stable || GET_OPTION (target) > 1)
-    target = solver->phases.target + idx;
+  else if (solver->stable || GET_OPTION (target) > 1) {
+    // --- MODIFICACIÓN NEUROBACK TARGET ---
+    // Si la opción target está activa y tenemos datos neurales, los usamos.
+    if (GET_OPTION(neural_backbone_target) && 
+        solver->phases.neural && 
+        solver->phases.neural[idx]) {
+        
+        target = solver->phases.neural + idx;
+    } 
+    else {
+        target = solver->phases.target + idx;
+    }
+    // -------------------------------------
+  }
   else
     target = 0;
 
