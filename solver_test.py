@@ -2,7 +2,6 @@ import subprocess
 from pathlib import Path
 import shutil
 import time
-from typing import Tuple, List
 
 CNF_DIR = Path("./sym_data/cnf/test")
 BACKBONE_DIR = Path("./sym_data/backbone/test")
@@ -11,154 +10,113 @@ RESULTS_DIR = Path("./results")
 
 RESULTS_DIR.mkdir(exist_ok=True)
 
-COMP_EXTS = [".xz", ".bz2", ".gz", ".lzma"]
-
-
-TAKE_FRACTION: float = 1.0  
-
-def remove_compression_suffix(filename: str) -> str:
-    """Strip only the compression extension if present (xz, bz2, gz, lzma)."""
-    for ext in COMP_EXTS:
-        if filename.endswith(ext):
-            return filename[: -len(ext)]
-    return filename
-
-
-def is_cnf_like(name: str) -> bool:
-    """Heuristic to select CNF-like instances in the dataset dirs.
-
-    We include files whose names contain any of these markers:
-    - '.cnf' (typical DIMACS CNF)
-    - '_cnf' (mcc2020 naming)
-    - 'dimacs' (some benchmarks use '.dimacs')
-    """
-    lname = name.lower()
-    return (".cnf" in lname) or ("_cnf" in lname) or ("dimacs" in lname)
-
-
-def decompress_file(src_file: Path, dest_dir: Path, overwrite: bool = False) -> Path:
-    """Decompress src_file if it's compressed into dest_dir and return the decompressed path.
-
-    The output filename is the source name with only the final compression suffix removed.
-    For example:
-      - 'foo.cnf.xz'   -> 'dest_dir/foo.cnf'
-      - 'bar.b+e.gz'   -> 'dest_dir/bar.b+e'
-      - 'baz.lzma'     -> 'dest_dir/baz'
-    If the file is not compressed, it is simply copied into dest_dir and that path is returned.
-    """
+def decompress_file(xz_file: Path, dest_dir: Path) -> Path:
     dest_dir.mkdir(exist_ok=True)
-
-    name_wo_comp = remove_compression_suffix(src_file.name)
-    out_path = dest_dir / name_wo_comp
-
-    if out_path.exists() and not overwrite:
-        return out_path
-
-    # Work on a temporary copy in destination directory to avoid modifying the source files
-    temp_src = dest_dir / src_file.name
-    shutil.copy(src_file, temp_src)
-
-    print(f"Decompressing {src_file.name} into {out_path}...")
-
-    if temp_src.suffix == ".xz" or temp_src.suffix == ".lzma":
-        # xz can decompress both .xz and .lzma
-        subprocess.run(["xz", "-dkf", str(temp_src)], check=True)
-    elif temp_src.suffix == ".bz2":
-        subprocess.run(["bzip2", "-dkf", str(temp_src)], check=True)
-    elif temp_src.suffix == ".gz":
-        subprocess.run(["gzip", "-dkf", str(temp_src)], check=True)
-    else:
-        # Not a recognized compression, just copy as-is
-        shutil.move(str(temp_src), str(out_path))
-        return out_path
-
-    return out_path
+    decompressed_file = dest_dir / xz_file.with_suffix("").name
+    temp_xz = dest_dir / xz_file.name
+    if not decompressed_file.exists():
+        shutil.copy(xz_file, temp_xz)
+        print(f"Decompressing {xz_file.name} into {decompressed_file}...")
+        subprocess.run(["xz", "-dkf", str(temp_xz)], check=True)
+    return decompressed_file
 
 
-def run_cmd(cmd: List[str]) -> Tuple[str, float]:
-    start = time.time()
+def run_solver(cnf_file: Path, extra_args: list[str]) -> tuple[str, float]:
+    """Run solver with optional extra arguments and return (result, elapsed_time)"""
+
+    cmd = [str(SOLVER_BINARY.resolve()), str(cnf_file.resolve()), "-q", "-n"] + extra_args
+
+    start_time = time.time()
+
     try:
-        result = subprocess.run(cmd, text=True, capture_output=True, timeout=10)
+        result = subprocess.run(
+            cmd,
+            text=True,
+            capture_output=True,
+            timeout=5
+        )
     except subprocess.TimeoutExpired:
-        return "TIMEOUT", time.time() - start
-    elapsed = time.time() - start
+        return "TIMEOUT", time.time() - start_time
+
+    elapsed = time.time() - start_time
+
+    if result.stderr:
+        print("stderr:", result.stderr.strip())
+
     stdout = result.stdout.strip() if result.stdout else "NO_OUTPUT"
     return stdout, elapsed
 
-def build_cmd_default(cnf_path: Path) -> List[str]:
-    # Use the same stable mode as the other configurations for fair comparison
-    return [str(SOLVER_BINARY.resolve()), "-q", "-n", "--stable=2", str(cnf_path.resolve())]
-
-
 
 def main():
-    # Collect CNF-like files, including compressed variants
-    candidate_files = [p for p in CNF_DIR.iterdir() if p.is_file() and is_cnf_like(p.name)]
-    cnf_files = sorted(candidate_files, key=lambda p: p.name)
-
-    # Apply subset selection for faster testing
-    if 0 < TAKE_FRACTION < 1.0 and cnf_files:
-        limit = max(1, int(len(cnf_files) * TAKE_FRACTION))
-        cnf_files = cnf_files[:limit]
-        print(f"Using a subset: {limit}/{len(candidate_files)} instances.")
-    summary = {"NeuroBack": [], "NeuroBack-Weighted": [], "Default": []}
+    cnf_files = sorted(CNF_DIR.glob("*.cnf.xz"))
+    summary = {"NeuroBack": [], "Default": [], "Weighted Neuroback": [], "Prioritized Neuroback": []}
 
     for cnf_file in cnf_files:
         print(f"\n=== Processing {cnf_file.name} ===")
 
-        # Prepare a working directory under results for this instance
-        instance_key = remove_compression_suffix(cnf_file.name)  
-        cnf_result_dir = RESULTS_DIR / Path(instance_key).stem 
-        cnf_result_dir.mkdir(exist_ok=True)
-
-        # Ensure we have an uncompressed CNF path to give the solver
-        cnf_path_for_solver = decompress_file(cnf_file, cnf_result_dir)
-
-        # Backbone path
+        # NeuroBack
+        print("Running NeuroBack...")
         backbone_xz = BACKBONE_DIR / f"{cnf_file.stem}.backbone.xz"
-        backbone_file = None
         if backbone_xz.exists():
+            cnf_result_dir = RESULTS_DIR / cnf_file.stem
+            cnf_result_dir.mkdir(exist_ok=True)
+
             backbone_file = decompress_file(backbone_xz, cnf_result_dir)
 
-
-        # NeuroBack 
-        print("Running NeuroBack...")
-        if backbone_file:
-            nb_out, nb_time = run_cmd([
-                str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()), "-q", "-n",
-                "--stable=2", "--neural_backbone_initial", "--neuroback_cfd=0.9",
-                f"--backbonefile={backbone_file.resolve()}",
+            nb_out, nb_time = run_solver(cnf_file, [
+                "--stable=2",
+                "--neural_backbone_initial",
+                "--neuroback_cfd=0.9",
+                str(backbone_file.resolve())
             ])
             summary["NeuroBack"].append((cnf_file.name, nb_out, nb_time))
-            
         else:
-            summary["NeuroBack"].append((cnf_file.name, "NO_BACKBONE", 0.8))
-
-
-        # NeuroBack-Weighted 
-        print("Running NeuroBack-Weighted...")
-        if backbone_file:
-            bw_out, bw_time = run_cmd([
-                str(SOLVER_BINARY.resolve()), str(cnf_path_for_solver.resolve()), "-q", "-n",
-                "--stable=2", "--neural_backbone_weighted", "--neural_backbone_weight=0.0",
-                f"--backbonefile={backbone_file.resolve()}",
-            ])
-            summary["NeuroBack-Weighted"].append((cnf_file.name, bw_out, bw_time))
-            
-        else:
-            summary["NeuroBack-Weighted"].append((cnf_file.name, "NO_BACKBONE", 0.7))
-        
+            summary["NeuroBack"].append((cnf_file.name, "NO_BACKBONE", 0.0))
 
         # Default-Kissat
         print("Running Default-Kissat...")
-        def_out, def_time = run_cmd(build_cmd_default(cnf_path_for_solver))
+        def_out, def_time = run_solver(cnf_file, [])
         summary["Default"].append((cnf_file.name, def_out, def_time))
-        
 
+        # Weighted Neuroback
+        print("Running Weighted Neuroback...")
+        backbone_xz = BACKBONE_DIR / f"{cnf_file.stem}.backbone.xz"
+        if backbone_xz.exists():
+            cnf_result_dir = RESULTS_DIR / cnf_file.stem
+            cnf_result_dir.mkdir(exist_ok=True)
 
+            backbone_file = decompress_file(backbone_xz, cnf_result_dir)
+
+            nb_out, nb_time = run_solver(cnf_file, [
+                "--stable=2",
+                "--neural_backbone_weighted",
+                "--neural_backbone_weight=0.9",
+                str(backbone_file.resolve())
+            ])
+            summary["Weighted Neuroback"].append((cnf_file.name, nb_out, nb_time))
+        else:
+            summary["Weighted Neuroback"].append((cnf_file.name, "NO_BACKBONE", 0.0))
+
+        print("Running Prioritized Neuroback...")
+        backbone_xz = BACKBONE_DIR / f"{cnf_file.stem}.backbone.xz"
+        if backbone_xz.exists():
+            cnf_result_dir = RESULTS_DIR / cnf_file.stem
+            cnf_result_dir.mkdir(exist_ok=True)
+
+            backbone_file = decompress_file(backbone_xz, cnf_result_dir)
+            back_param = str(backbone_file.resolve())
+
+            nb_out, nb_time = run_solver(cnf_file, [
+                "--stable=2",
+                "--neural_backbone_prioritize",
+                back_param
+            ])
+            summary["Prioritized Neuroback"].append((cnf_file.name, nb_out, nb_time))
+        else:
+            summary["Prioritized Neuroback"].append((cnf_file.name, "NO_BACKBONE", 0.0))
 
     # --- PRINT SUMMARY ---
-    for config in ["NeuroBack", "NeuroBack-Weighted", "Default"]:
+    for config in ["NeuroBack", "Default", "Weighted Neuroback", "Prioritized Neuroback"]:
         print(f"\n===== RESULTS FOR {config} =====")
         total_time = 0
         sat_count = unsat_count = error_count = no_backbone = 0
@@ -166,16 +124,13 @@ def main():
         for cnf_name, result, t in summary[config]:
             total_time += t
 
-            if "SATISFIABLE" in result:
+            if result.startswith("SATISFIABLE"):
                 sat_count += 1
-            elif "UNSATISFIABLE" in result:
+            elif result.startswith("UNSATISFIABLE"):
                 unsat_count += 1
             elif result == "NO_BACKBONE":
                 no_backbone += 1
             elif result in ("TIMEOUT", "NO_OUTPUT"):
-                error_count += 1
-            else:
-                # Clasifica cualquier salida no reconocida como error para cerrar la suma
                 error_count += 1
 
         print(f"\n--- METRICS ({config}) ---")
@@ -183,10 +138,9 @@ def main():
         print(f"SAT: {sat_count}")
         print(f"UNSAT: {unsat_count}")
         print(f"Errors: {error_count}")
-        print(f"No Backbone: {no_backbone}")
-        print(f"Total solving time: {total_time:.4f}s")
+        print(f"Total solving time: {total_time:.2f}s")
         avg = (total_time / len(cnf_files)) if cnf_files else 0.0
-        print(f"Average per problem: {avg:.4f}s")
+        print(f"Average per problem: {avg:.2f}s")
         variance = sum((t - avg) ** 2 for _, _, t in summary[config]) / len(cnf_files) if cnf_files else 0.0
         print(f"Time variance: {variance:.4f}s^2")
 

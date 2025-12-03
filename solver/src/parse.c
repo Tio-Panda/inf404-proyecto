@@ -467,6 +467,49 @@ kissat_parse_backbone (kissat * solver, file * file, double neuralback_cfd) {
 		}
 	}
 
+	// New independent mode: prioritize by backbone probabilities for initial phases
+	if(GET_OPTION(neural_backbone_prioritize)) {
+		value* initial_phase_list = solver->phases.initial;
+		const value initial_phase = INITIAL_PHASE;
+		for (all_phases (initial, p))
+			*p = initial_phase;
+
+		char line[128];
+		while (fgets(line, sizeof line, file->file)) {
+			char *p = line;
+			while (*p == ' ' || *p == '\t') p++;
+			if (!*p || *p == '\n' || *p == '\r') continue;
+
+			// Expect format: "<external_idx> , <score>" where score in [0.0, 1.0]
+			if (strchr(p, ',')) {
+				int eidx; double score;
+				if (sscanf(p, "%d , %lf", &eidx, &score) == 2) {
+					if (eidx > 0 && (size_t)eidx < SIZE_STACK(solver->import)) {
+						import *import = &PEEK_STACK (solver->import, eidx);
+						// Deterministic thresholding using confidence parameter
+						if(score >= neuralback_cfd) {
+							initial_phase_list[IDX (import->lit)] = -1;
+						} else if(score <= 1.0 - neuralback_cfd) {
+							initial_phase_list[IDX (import->lit)] = 1;
+						}
+					}
+				}
+				continue;
+			}
+
+			// Also accept sign-only entries for compatibility
+			int eidx = 0, sign = 1;
+			if (*p == 'b' || *p == 'B') { p++; while (*p==' '||*p=='\t') p++; }
+			if (*p == '-' || *p == '+') { if (*p=='-') sign=-1; p++; }
+			if (sscanf(p, "%d", &eidx) == 1 && eidx > 0) {
+				if ((size_t)eidx < SIZE_STACK(solver->import)) {
+					import *import = &PEEK_STACK (solver->import, eidx);
+					initial_phase_list[IDX (import->lit)] = sign;
+				}
+			}
+		}
+	}
+
 		if(GET_OPTION(neural_backbone_weighted)) {
 			// Apply weighted backbone only to initial phases: probabilistically set initial phases.
 			value* initial_phase_list = solver->phases.initial;

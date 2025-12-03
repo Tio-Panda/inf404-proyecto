@@ -51,6 +51,7 @@ OPTION( minimizeticks, 1, 0, 1, "count ticks in minimize and shrink") \
 OPTION( modeinit, 1e3, 10, 1e8, "initial focused conflicts limit") \
 OPTION( neural_backbone_always, 0, 0, 1, "always prioritize neural backbone") \
 OPTION( neural_backbone_initial, 0, 0, 1, "initial neural backbone application") \
+OPTION( neural_backbone_prioritize, 0, 0, 1, "apply backbone probability-based initial phases") \
 OPTION( neural_backbone_rephase, 0, 0, 1, "add a neural backbone rephasing") \
 OPTION( neural_backbone_weighted, 0, 0, 1, "enable probabilistic neural-backbone selection") \
 OPTION( neural_backbone_weight, 50, 0, 100, "probability (per cent) to use neural-backbone suggestion when available") \
