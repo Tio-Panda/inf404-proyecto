@@ -4,13 +4,12 @@ from pathlib import Path
 import shutil
 import time
 
-
 # =====================
 MODEL_NAME = "NeuroBack"   # Cambia aquí: "NeuroBack", "inf404", etc.
 MODEL_TAG = MODEL_NAME.lower()
 
 CNF_DIR = Path("./sym_data/cnf/test/")
-# BACKBONE_DIR = Path("./sym_data/backbone/test")
+#BACKBONE_DIR = Path("./sym_data/backbones/test/")
 BACKBONE_DIR = Path("./prediction/cpu/cmb_predictions/")
 SOLVER_BINARY = Path("./solver/build/kissat")
 RESULTS_DIR = Path("./results")
@@ -26,7 +25,6 @@ def decompress_file(xz_file: Path, dest_dir: Path) -> Path:
         subprocess.run(["xz", "-dkf", str(temp_xz)], check=True)
     return decompressed_file
 
-
 def parse_dimacs_header(cnf_path: Path) -> tuple[int, int]:
     with open(cnf_path, "r") as f:
         for line in f:
@@ -35,20 +33,17 @@ def parse_dimacs_header(cnf_path: Path) -> tuple[int, int]:
                 return int(v), int(c)
     return -1, -1
 
-
 def run_solver(cnf_file: Path, extra_args: list[str]) -> tuple[str, float]:
     cmd = [str(SOLVER_BINARY.resolve()), str(cnf_file.resolve()), "-q", "-n"] + extra_args
     start = time.time()
-
     try:
-        result = subprocess.run(cmd, text=True, capture_output=True, timeout=5)
+        result = subprocess.run(cmd, text=True, capture_output=True, timeout=300)
     except subprocess.TimeoutExpired:
         return "TIMEOUT", time.time() - start
 
     elapsed = time.time() - start
     stdout = result.stdout.strip() if result.stdout else "NO_OUTPUT"
     return stdout, elapsed
-
 
 def compute_summary(rows, title):
     total = len(rows)
@@ -67,20 +62,12 @@ def compute_summary(rows, title):
     print(f"Average per problem: {avg_time:.2f}s")
     print()
 
-
 def main():
     cnf_files = sorted(CNF_DIR.glob("*.cnf.xz"))
-
     model_rows = []
     default_rows = []
 
     print(f"\n=== Ejecutando benchmark para modelo: {MODEL_NAME} ===\n")
-
-    # bk = list(BACKBONE_DIR.glob(f"{cnf_files[0].stem}"))
-    # print(cnf_files[0])
-    # print(cnf_files[0].stem)
-    # print(list(BACKBONE_DIR.glob(f"{cnf_files[0].stem}.xz.res.tar.gz")))
-    # print(bk)
 
     for cnf_file in cnf_files:
         print(f"\n→ Instancia: {cnf_file.name}")
@@ -91,30 +78,33 @@ def main():
         cnf_uncompressed = decompress_file(cnf_file, cnf_result_dir)
         n_vars, n_clauses = parse_dimacs_header(cnf_uncompressed)
 
-        # ============  MODEL MODE ============
-        backbone_candidates = list(BACKBONE_DIR.glob(f"{cnf_files[0].stem}.xz.res.tar.gz"))
+        # ============  MODEL MODE CON BACKBONE ============
+        backbone_candidates = list(BACKBONE_DIR.glob(f"{cnf_file.stem}*.res.tar.gz"))
 
         if backbone_candidates:
             backbone_tar = backbone_candidates[0]
-
             print(f"  [{MODEL_NAME}] Descomprimiendo backbone: {backbone_tar.name}", end=" ")
 
-            # Unpack backbone
             shutil.unpack_archive(backbone_tar, cnf_result_dir)
-
-            # Search for .res or .pred files
             extracted = list(cnf_result_dir.glob("*.res")) + list(cnf_result_dir.glob("*.pred"))
-
-            model_time = 0.0
-            inference_time = 0.0
 
             if extracted:
                 backbone_file = extracted[0]
                 has_backbone = True
-                model_out = MODEL_NAME
+                # Ejecutamos el solver con flags de NeuroBack
+                extra_args = [
+                    "--stable=2",
+                    "--neural_backbone_initial",
+                    "--neuroback_cfd=0.9",
+                    str(backbone_file.resolve())
+                ]
+                model_out, model_time = run_solver(cnf_uncompressed, extra_args)
+                inference_time = 0.0
                 print("OK")
             else:
                 model_out = "NO_BACKBONE"
+                model_time = 0.0
+                inference_time = 0.0
                 has_backbone = False
                 print("ERROR: no se encontró archivo .res dentro del tar")
         else:
