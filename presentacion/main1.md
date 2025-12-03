@@ -209,3 +209,83 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 - **Perdida de topologia**: Al aplanar el grafo, perdemos la estructura explicita de quien es vecino de quien.
 
 - **Dependencia de la heuristica de ordenamiento**: Si nuestra heuristica para ordenar los nodos al aplanar el grafo es mala, podriamos tener problemas para encontrar las relaciones.
+
+---
+
+# Heurísticas
+
+- Neuroback-Kissat funciona con Sistema cascada.
+- Implementacion sencilla pero efectiva.
+- Preexistentes
+    - Neural-backbone  --initial (principal).
+    - Neural-backbone  --always.
+- Propuestas
+    - Partial-backbone
+    - Prioritized-backbone
+    - LowScores-backbones
+
+---
+
+# Heurísticas: Initial/Always backbone
+
+- Initial backbone
+    - Utilización de la red solo para el signo inicial
+- Añways backbone.
+    - Priorización del uso de la red para todas las decisiones
+- Admiten como posible variable de backbone si la confianza es alta
+- Por cada una, se elige variable, se asigna fase, y se propaga
+
+---
+
+# Heurísticas: Partial backbone
+
+- Heurística estocástica.
+- Utilizar una fracción del backbone predicho.
+- Puede ayudar en problemas donde el backbone predicho no es completamente correcto.
+
+---
+
+# Heurísticas: Prioritized backbone 
+
+- Heurística de variable branching
+- La cola de decisión se ordena según probabilidad de predicción
+- Posterior a esto, se aplica phase selection
+
+---
+
+# Heurísticas: LowScores backbone 
+
+- Kissat utiliza VSIDS como heurística. 
+- Utilizar el backbone solo a variables poco activas.
+    - Variables de alta actividad: VSIDS ha demostrado ser confiable → se sigue usando VSIDS.
+    - Variables de baja actividad: VSIDS es menos informativo → aquí las predicciones de la GNN pueden aportar valor.
+
+---
+# Resultados
+![width:700px](Resultado_NeuroBack_cactus_plot.png)
+
+---
+# Resultados: Estadísticas Promedio
+
+| Método | Conf. | Dec. | Prop. | Rest. |
+|--------|-------|-------|-------|-------|
+| Kissat-Default | 4180.27 | 4794.67 | 103735.14 | 1.39  |
+| NeuroBack-Initial | 3008.45 | 3440.61 | 71466.02 | 1.09 |
+| NeuroBack-Always | 4288.21 | 4896.27 | 94072.07 | 1.41 |
+| NeuroBack-Partial | 3918.71 | 4524.27 | 107093.13  | 1.31 |
+| NeuroBack-Prioritized | 3959.69 | 4537.95 | 96460.14 | 1.32 |
+| NeuroBack-LowScores | 4486.98 | 5026.29 | 107783.91 | 1.44 |
+
+---
+# Resultados
+- En promedio NeuroBack-Initial tuvo mejor rendimiento.
+    - Menor tiempo de ejecución, y menos restarts.
+- Las heurísticas implemtentadas tienen en general peor rendimiento que NeuroBack-Initial pero mejor que kissat-default.
+- Partial y prioritized destacan del resto.
+---
+# Discusión y conclusiones
+---
+
+
+# Referencias
+- Wenxi Wang et al., "NeuroBack: Improving CDCL SAT Solving using Graph Neural Networks", arXiv:2110.14053 
