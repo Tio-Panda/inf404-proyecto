@@ -33,58 +33,11 @@ Nombre, Nombre
 <img src="logo2.png">
 </div>
 
----
-
-# Tabla de contenidos
-
-<div class="beam-toc">
-    <div class="beam-toc-item">
-        <div class="beam-number"></div>
-        <div class="beam-content">
-            <h3 class="beam-section-title">Contexto</h3>
-        </div>
-    </div>
-    
-  <div class="beam-toc-item">
-      <div class="beam-number"></div>
-      <div class="beam-content">
-          <h3 class="beam-section-title">Marco teórico</h3>
-      </div>
-  </div>
-    
-  <div class="beam-toc-item">
-      <div class="beam-number"></div>
-      <div class="beam-content">
-          <h3 class="beam-section-title">Problema</h3>
-      </div>
-  </div>
-  
-  <div class="beam-toc-item">
-      <div class="beam-number"></div>
-      <div class="beam-content">
-          <h3 class="beam-section-title">Solución</h3>
-      </div>
-  </div>
-
-  <div class="beam-toc-item">
-      <div class="beam-number"></div>
-      <div class="beam-content">
-          <h3 class="beam-section-title">Resultados</h3>
-      </div>
-  </div>
-  
-  <div class="beam-toc-item">
-      <div class="beam-number"></div>
-      <div class="beam-content">
-          <h3 class="beam-section-title">Discusión y conclusiones</h3>
-      </div>
-  </div>
-</div>
 
 ---
 # Neuroback
 
-Es una arquitectura hibrida de Graph Transformer disenada para superar las limitaciones de memoria (self-attention $O(N^2)$) para formulas SAT muy grandes.
+Es una arquitectura hibrida de Graph Transformer diseñada para superar las limitaciones de memoria (self-attention $O(N^2)$) para fórmulas SAT muy grandes.
 
 Su objetivo es predicir la fase de las variables, especialmente las del backbone para luego ser utilizadas en un SAT Solver.
 
@@ -101,9 +54,9 @@ Su objetivo es predicir la fase de las variables, especialmente las del backbone
 ---
 # GSA
 
-La GSA es un mecanismo de atención que restringe el cálculo de "quién atiende a quién". 
+GSA es un mecanismo de atención que restringe el cálculo de "quién atiende a quién". 
 
-A diferencia de la auto-atención global de un Transformer estándar (que calcula la relación de todos los nodos contra todos los nodos), la GSA solo calcula puntuaciones de atención para pares de nodos directamente conectados en el grafo.
+A diferencia de la auto-atención global de un Transformer estándar (que calcula la relación de todos los nodos contra todos los nodos), GSA solo calcula puntuaciones de atención para pares de nodos directamente conectados en el grafo.
 
 GSA reduce esto a una complejidad lineal respecto al número de aristas $O(|E|)$.
 
@@ -114,12 +67,12 @@ LSA no realiza atención entre diferentes nodos. En su lugar, toma el vector de 
 
 Si el embedding de un nodo tiene dimensión $D$, LSA lo remodela a una secuencia de longitud $D/P$ con dimensión $P$. La atención se calcula internamente sobre esta secuencia.
 
-Al operar dentro de cada nodo independientemente, la complejidad de memoria desciende a $O(|V|)$ 
+Al operar dentro de cada nodo independientemente, la complejidad de memoria desciende a $O(|V|)$ .
 
 ---
 # Limitaciones
 
-Al eliminar la atención global, el modelo depende de la propagación capa por capa para ver "lejos". (Aunque introducen "meta-nodos" para reducir el diámetro del grafo)
+Al eliminar la atención global, el modelo depende de la propagación capa por capa para ver "lejos" (aunque introducen "meta-nodos" para reducir el diámetro del grafo).
 
 
 ---
@@ -127,9 +80,9 @@ Al eliminar la atención global, el modelo depende de la propagación capa por c
 
 Mamba es una arquitectura de modelo de secuencia basada en Structured State Space Models (SSMs).
 
-A diferencia de los Transformers, que utilizan el mecanismo de atención con complejidad cuadrática $O(N^2)$ respecto a la longitud de la secuencia, Mamba logra una escala lineal $O(N)$ en longitud de secuencia . 
+A diferencia de los Transformers, que utilizan el mecanismo de atención con complejidad cuadrática $O(N^2)$ respecto a la longitud de la secuencia, Mamba logra una escala lineal $O(N)$ en longitud de secuencia. 
 
-Esto lo convierte en una alternativa eficiente para modelar secuencias extremadamente largas
+Esto lo convierte en una alternativa eficiente para modelar secuencias extremadamente largas.
 
 ---
 # Mamba
@@ -140,14 +93,14 @@ Esto lo convierte en una alternativa eficiente para modelar secuencias extremada
 ---
 # Graph Mamba
 
-Graph-Mamba es una arquitectura de red neuronal para grafos que integra el bloque Mamba (Selective State Space Model) dentro del framework estándar GraphGPS, reemplazando el costoso módulo de Atención de los Graph Transformers .
+Graph-Mamba es una arquitectura de red neuronal para grafos que integra el bloque Mamba (Selective State Space Model) dentro del framework estándar GraphGPS, reemplazando el costoso módulo de Atención de los Graph Transformers.
 
-Es el primer intento exitoso de adaptar los modelos de espacio de estados (SSMs), diseñados originalmente para secuencias (texto, audio), al dominio de los grafos, que son inherentemente no secuenciales .
+Es el primer intento exitoso de adaptar los modelos de espacio de estados (SSMs), diseñados originalmente para secuencias (texto, audio), al dominio de los grafos, que son inherentemente no secuenciales.
 
 ---
 # Graph Mamba
 
-En lugar de submuestrear el grafo aleatoriamente, utiliza el mecanismo de selección de Mamba para realizar un filtrado de nodos dependiente de la entrada . Esto permite que el modelo decida dinámicamente qué nodos son relevantes para el contexto y cuáles ignorar, manteniendo una complejidad lineal $O(L)$ .
+En lugar de submuestrear el grafo aleatoriamente, utiliza el mecanismo de selección de Mamba para realizar un filtrado de nodos dependiente de la entrada. Esto permite que el modelo decida dinámicamente qué nodos son relevantes para el contexto y cuáles ignorar, manteniendo una complejidad lineal $O(L)$.
 
 ---
 # Graph Mamba
@@ -155,7 +108,7 @@ En lugar de submuestrear el grafo aleatoriamente, utiliza el mecanismo de selecc
 
 ¿Cómo conviertes un Grafo en Secuencia?
 
-**Aplanamiento y Priorización de Nodos**: Dado que el escaneo de Mamba es unidireccional por lo tanto, el orden importa muchísimo. Graph-Mamba ordena la secuencia de entrada basándose en heurísticas como el grado del nodo. La idea es que los nodos "mas importantes" sean capaz de ver el contexto de todos los nodos anteriores
+**Aplanamiento y Priorización de Nodos**: Dado que el escaneo de Mamba es unidireccional por lo tanto, el orden importa muchísimo. Graph-Mamba ordena la secuencia de entrada basándose en heurísticas como el grado del nodo. La idea es que los nodos "más importantes" sean capaces de ver el contexto de todos los nodos anteriores.
 
 ---
 # Graph Mamba
@@ -192,29 +145,29 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 
 - **Graph-Mamba**: Ordena los nodos basándose en su grado (cuántas veces aparece una variable en las cláusulas). Además, añade ruido aleatorio durante el entrenamiento (`score = node_degrees + noise`) para simular la permutación y evitar el sobreajuste a un orden específico.
 
-- **Mamba**: El uso de SSMs y porder "comprimir" la información de todas las variables anteriores en un estado oculto finito.
+- **Mamba**: El uso de SSMs y poder "comprimir" la información de todas las variables anteriores en un estado oculto finito.
 
-- **Bi-Mamba+**: Procesa la secuencia en ambas direcciones, Esto asegura que cada variable tenga contexto tanto de sus "predecesores" como de sus "sucesores" en la lista ordenada.
+- **Bi-Mamba+**: Procesa la secuencia en ambas direcciones. Esto asegura que cada variable tenga contexto tanto de sus "predecesores" como de sus "sucesores" en la lista ordenada.
 
 ---
 # NeuroBackMamba - Ventajas
 
-- **Escalabilidad**: Gracias a las SSMs, y su mejor uso de memoria, podemos usar formulas mas grandes y tener redes mas profundas.
+- **Escalabilidad**: Gracias a las SSMs, y su mejor uso de memoria, podemos usar fórmulas mas grandes y tener redes más profundas.
 
 - **Contexto global**: Neuroback, sacrifica tener un contexto global para poder bajar su complejidad.
 
 ---
-# NeuroBackMamba - Ventajas
+# NeuroBackMamba - Desventajas
 
-- **Perdida de topologia**: Al aplanar el grafo, perdemos la estructura explicita de quien es vecino de quien.
+- **Perdida de topologia**: Al aplanar el grafo, perdemos la estructura explícita de quien es vecino de quien.
 
-- **Dependencia de la heuristica de ordenamiento**: Si nuestra heuristica para ordenar los nodos al aplanar el grafo es mala, podriamos tener problemas para encontrar las relaciones.
+- **Dependencia de la heuristica de ordenamiento**: Si nuestra heurística para ordenar los nodos al aplanar el grafo es mala, podríamos tener problemas para encontrar las relaciones.
 
 ---
 
 # Heurísticas
 
-- Neuroback-Kissat funciona con Sistema cascada.
+- Neuroback-Kissat funciona con sistema cascada.
 - Implementacion sencilla pero efectiva.
 - Preexistentes
     - Neural-backbone  --initial (principal).
@@ -222,18 +175,18 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 - Propuestas
     - Partial-backbone
     - Prioritized-backbone
-    - LowScores-backbones
+    - LowScores-backbone
 
 ---
 
 # Heurísticas: Initial/Always backbone
 
 - Initial backbone
-    - Utilización de la red solo para el signo inicial
-- Añways backbone.
-    - Priorización del uso de la red para todas las decisiones
-- Admiten como posible variable de backbone si la confianza es alta
-- Por cada una, se elige variable, se asigna fase, y se propaga
+    - Utilización de la red solo para el signo inicial.
+- Añways backbone
+    - Priorización del uso de la red para todas las decisiones.
+- Admiten como posible variable de backbone si la confianza es alta.
+- Por cada una, se elige variable, se asigna fase, y se propaga.
 
 ---
 
@@ -247,9 +200,9 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 
 # Heurísticas: Prioritized backbone 
 
-- Heurística de variable branching
-- La cola de decisión se ordena según probabilidad de predicción
-- Posterior a esto, se aplica phase selection
+- Heurística de variable branching.
+- La cola de decisión se ordena según probabilidad de predicción.
+- Posterior a esto, se aplica phase selection.
 
 ---
 
