@@ -13,7 +13,6 @@ footer: INF404
 
 <div style="position:relative; top: 90px; text-align: center">
 Sebastián Gutiérrez, Jose Pinto, Nicolás Barahona, Matías Sandoval, Fernando Salgado y Sophia Escobar <br>
-Nombre, Nombre
 
 <div style="text-align:center;">
 </div>
@@ -273,5 +272,9 @@ Es una evolución directa de Mamba que introduce dos mejoras críticas: bidirecc
 ---
 
 
-# Referencias
-- Wenxi Wang et al., "NeuroBack: Improving CDCL SAT Solving using Graph Neural Networks", arXiv:2110.14053 
+### Referencias
+- Wang, W., Hu, Y., Tiwari, M., Khurshid, S., McMillan, K., & Miikkulainen, R. (2024). NeuroBack: Improving CDCL sat solving using graph neural networks. https://arxiv.org/abs/2110.14053 
+- Gu, A., & Dao, T. (2024). Mamba: Linear-time sequence modeling with selective state spaces. https://arxiv.org/abs/2312.00752
+- Wang, C., Tsepa, O., Ma, J., & Wang, B. (2024). Graph-mamba: Towards long-range graph sequence modeling with selective state spaces. https://arxiv.org/abs/2402.00789
+- Tang, S., Ma, L., Li, H., Sun, M., & Shen, Z. (2025). Bi-Mamba: Towards accurate 1-bit state space models. https://arxiv.org/abs/2411.11843 
+- Liang, A., Jiang, X., Sun, Y., Shi, X., & Li, K. (2024). Bi-mamba+: Bidirectional mamba for time series forecasting. https://arxiv.org/abs/2404.15772 
