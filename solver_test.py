@@ -10,8 +10,8 @@ MODEL_NAME = "NeuroBack"   # Cambia aquí: "NeuroBack", "inf404", etc.
 MODEL_TAG = MODEL_NAME.lower()
 
 CNF_DIR = Path("./sym_data/cnf/test/")
-BACKBONE_DIR = Path("./sym_data/backbone/test")
-#BACKBONE_DIR = Path("./prediction/cpu/cmb_predictions")
+# BACKBONE_DIR = Path("./sym_data/backbone/test")
+BACKBONE_DIR = Path("./prediction/cpu/cmb_predictions/")
 SOLVER_BINARY = Path("./solver/build/kissat")
 RESULTS_DIR = Path("./results")
 
@@ -76,6 +76,12 @@ def main():
 
     print(f"\n=== Ejecutando benchmark para modelo: {MODEL_NAME} ===\n")
 
+    # bk = list(BACKBONE_DIR.glob(f"{cnf_files[0].stem}"))
+    # print(cnf_files[0])
+    # print(cnf_files[0].stem)
+    # print(list(BACKBONE_DIR.glob(f"{cnf_files[0].stem}.xz.res.tar.gz")))
+    # print(bk)
+
     for cnf_file in cnf_files:
         print(f"\n→ Instancia: {cnf_file.name}")
 
@@ -86,7 +92,7 @@ def main():
         n_vars, n_clauses = parse_dimacs_header(cnf_uncompressed)
 
         # ============  MODEL MODE ============
-        backbone_candidates = list(BACKBONE_DIR.glob(f"{cnf_file.stem}.c-*.res.tar.gz"))
+        backbone_candidates = list(BACKBONE_DIR.glob(f"{cnf_files[0].stem}.xz.res.tar.gz"))
 
         if backbone_candidates:
             backbone_tar = backbone_candidates[0]
@@ -99,14 +105,16 @@ def main():
             # Search for .res or .pred files
             extracted = list(cnf_result_dir.glob("*.res")) + list(cnf_result_dir.glob("*.pred"))
 
+            model_time = 0.0
+            inference_time = 0.0
+
             if extracted:
                 backbone_file = extracted[0]
                 has_backbone = True
+                model_out = MODEL_NAME
                 print("OK")
             else:
                 model_out = "NO_BACKBONE"
-                model_time = 0.0
-                inference_time = 0.0
                 has_backbone = False
                 print("ERROR: no se encontró archivo .res dentro del tar")
         else:
@@ -114,7 +122,6 @@ def main():
             model_time = 0.0
             inference_time = 0.0
             has_backbone = False
-
 
         print(f"OK → {model_out} ({model_time:.3f}s)")
 

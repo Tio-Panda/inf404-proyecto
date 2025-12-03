@@ -11,8 +11,8 @@ from data import *
 from gt_model import GTModel
 from mamba_model import NeuroBackMamba
 
-MODEL = "mamba"
-# MODEL = "neuroback"
+# MODEL = "mamba"
+MODEL = "neuroback"
 
 def predict_single(pt_dir_path, pt_file, model_path, res_dir_path, is_cuda=True):
     data = torch.load(os.path.join(pt_dir_path, pt_file), weights_only=False)
